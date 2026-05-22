@@ -1,6 +1,8 @@
 # Phase 1 — Milestone 0: Setup repo
 
-## Status: IN PROGRESS — code complete, pending HA smoke test (2026-05-22)
+## Status: DONE 2026-05-22
+
+Smoke test passato in sandbox: login cloud OK, device `dreame.fan.u2519` (did=-115387050) scoperto e config entry creata senza errori. Bug fix applicato durante test: `Authorization: Bearer <token>` → `Authorization: <static basic>` + `Dreame-Auth: <token>` (backend Dreame ritorna 401 "Missing token" con bearer auth standard).
 
 **Scope creep dichiarato**: in fase di esecuzione, su scelta esplicita dell'utente, lo scope di M0 è stato esteso a includere la validazione cloud reale nel config flow (originariamente assegnata a M1). Quindi `dreame_cloud.py` async è stato implementato ora invece che in M1. La sezione "Fuori scope" sottostante riflette il piano originale e non è più accurata — il client cloud E il config flow validante sono **dentro** scope effettivo di M0.
 

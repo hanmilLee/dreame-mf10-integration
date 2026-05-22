@@ -141,9 +141,13 @@ class DreameCloud:
     def _auth_headers(self) -> dict[str, str]:
         if not self._access_token:
             raise DreameAuthError("No access token; login first")
+        # Dreame backend wants the STATIC app-level Authorization header,
+        # plus the user access token in a dedicated `Dreame-Auth` header.
+        # Using `Authorization: Bearer <token>` returns HTTP 401 "Missing token".
         headers = {
             "User-Agent": _DREAME_USER_AGENT,
-            "Authorization": f"Bearer {self._access_token}",
+            "Authorization": _DREAME_AUTH_BASIC,
+            "Dreame-Auth": self._access_token,
             "Tenant-Id": self._tenant_id,
             "Content-Type": "application/json",
             "Accept": "*/*",
