@@ -34,22 +34,26 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-# Allow `from custom_components.dreame_mf10.dreame_cloud import ...` when
-# running the script directly from the repo root.
+# Import dreame_cloud + const directly from the integration folder,
+# bypassing custom_components/dreame_mf10/__init__.py (which pulls in
+# the Home Assistant runtime — not available when running the CLI
+# standalone outside HA).
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_PKG_DIR = _REPO_ROOT / "custom_components" / "dreame_mf10"
+if str(_PKG_DIR) not in sys.path:
+    sys.path.insert(0, str(_PKG_DIR))
 
 import aiohttp  # noqa: E402
 
-from custom_components.dreame_mf10.dreame_cloud import (  # noqa: E402
+from dreame_cloud import (  # noqa: E402
     DreameApiError,
     DreameAuthError,
     DreameCloud,
     DreameConnectionError,
 )
-from custom_components.dreame_mf10.const import (  # noqa: E402
+from const import (  # noqa: E402
     DEFAULT_REGION,
+    MF10_PROPERTY_CANDIDATES,
     REGION_OPTIONS,
     SUPPORTED_MODELS,
 )
@@ -72,15 +76,22 @@ def _parse_args() -> argparse.Namespace:
         "--region", default=DEFAULT_REGION, choices=REGION_OPTIONS,
         help=f"Dreame cloud region (default: {DEFAULT_REGION}).",
     )
+    p.add_argument(
+        "--candidates-only", action="store_true",
+        help="Scan only the (siid, piid) listed in MF10_PROPERTY_CANDIDATES "
+             "(fast, ~11 properties). Recommended mode — Dreame rejects whole "
+             "batches when one property is unknown AND ~8s/request for unknowns, "
+             "so a full range scan is impractical.",
+    )
     p.add_argument("--siid-min", type=int, default=1)
     p.add_argument("--siid-max", type=int, default=10)
     p.add_argument("--piid-min", type=int, default=1)
     p.add_argument("--piid-max", type=int, default=30)
     p.add_argument(
         "--batch-size", type=int, default=1,
-        help="Properties per get_properties call. Default 1 (safe — isolates "
-             "errors). Raise after verifying the backend tolerates per-item "
-             "errors inside a batch.",
+        help="Properties per get_properties call. Default 1: Dreame rejects "
+             "entire envelopes when any property is unknown, so each request "
+             "must contain only one to isolate failures.",
     )
     p.add_argument(
         "--batch-delay-ms", type=int, default=200,
@@ -115,37 +126,62 @@ def _print_device_list(devices: list[dict[str, Any]], verbose: bool) -> None:
         print(line)
 
 
-async def _preflight(cloud: DreameCloud, did: str) -> None:
-    """Sanity-check the response shape with one known-candidate property.
+async def _preflight(cloud: DreameCloud, did: str, host: str | None) -> None:
+    """Sanity-check using one known-good property.
 
-    Power on a MiOT fan is conventionally (siid=2, piid=1). We don't care
-    about the value — we only want to confirm the backend returns the
-    expected list-of-dicts shape before burning the full scan.
+    Power on a MiOT fan is conventionally (siid=2, piid=1) — we expect a
+    list of length 1 with `code == 0`. If the item itself errors, the
+    candidate is wrong (or this device doesn't expose it at all) and we
+    don't want to burn ~8s on every property in the snapshot to discover
+    that — abort early.
     """
-    _LOG.info("Preflight: probing (siid=2, piid=1) to validate response shape.")
+    _LOG.info("Preflight: probing (siid=2, piid=1) to validate response.")
     try:
-        res = await cloud.async_get_properties(did, [{"siid": 2, "piid": 1}])
+        res = await cloud.async_get_properties(did, [{"siid": 2, "piid": 1}], host=host)
     except DreameApiError as err:
         raise SystemExit(
-            f"Preflight failed: backend rejected even a single-property batch ({err}). "
-            "Cannot proceed safely — the batch semantics aren't what we expect."
+            f"Preflight failed: backend rejected envelope ({err}). The base "
+            "request path or auth is wrong — fix that before scanning."
         )
-    if not isinstance(res, list):
+    if not isinstance(res, list) or not res:
         raise SystemExit(
-            f"Preflight failed: expected list, got {type(res).__name__}. Response: {res!r}"
+            f"Preflight failed: expected non-empty list, got {res!r}."
         )
-    _LOG.info("Preflight OK: response is a list with %d item(s).", len(res))
+    code = res[0].get("code")
+    if code != 0:
+        _LOG.warning(
+            "Preflight: (2,1) returned per-item code=%s — power may not live "
+            "there on this model. Continuing scan, but expect some candidate "
+            "entries to error similarly.",
+            code,
+        )
+    else:
+        _LOG.info("Preflight OK: (2,1) value=%r", res[0].get("value"))
+
+
+def _classify_envelope_error(err: Exception) -> tuple[str, int | None]:
+    """Extract a structured kind + optional envelope code from an exception."""
+    if isinstance(err, DreameConnectionError):
+        return "connection_error", None
+    msg = str(err)
+    code: int | None = None
+    marker = "code="
+    if marker in msg:
+        try:
+            code = int(msg.split(marker, 1)[1].split()[0].rstrip(","))
+        except (ValueError, IndexError):
+            code = None
+    return "envelope_rejected", code
 
 
 async def _scan(
     cloud: DreameCloud,
     did: str,
-    siid_range: range,
-    piid_range: range,
+    host: str | None,
+    targets: list[dict[str, int]],
     batch_size: int,
     batch_delay_s: float,
 ) -> list[dict[str, Any]]:
-    targets = [{"siid": s, "piid": p} for s in siid_range for p in piid_range]
     total = len(targets)
     _LOG.info("Scanning %d properties (batch_size=%d).", total, batch_size)
 
@@ -153,14 +189,12 @@ async def _scan(
     for i in range(0, total, batch_size):
         batch = targets[i : i + batch_size]
         try:
-            raw = await cloud.async_get_properties(did, batch)
+            raw = await cloud.async_get_properties(did, batch, host=host)
         except (DreameApiError, DreameConnectionError) as err:
-            # Whole batch was rejected (or a transient network blip).
-            # Record each item with a synthetic error and keep going —
-            # losing 60s of scan to a single TCP timeout would be cruel.
+            kind, env_code = _classify_envelope_error(err)
             _LOG.warning(
-                "Batch %d-%d failed (%s); marking items as batch_error and continuing.",
-                i, i + len(batch) - 1, err,
+                "Batch %d-%d %s (envelope_code=%s); marking items and continuing.",
+                i, i + len(batch) - 1, kind, env_code,
             )
             for item in batch:
                 results.append(
@@ -168,7 +202,7 @@ async def _scan(
                         "siid": item["siid"],
                         "piid": item["piid"],
                         "code": None,
-                        "error": f"batch_error: {err}",
+                        "error": {"kind": kind, "envelope_code": env_code, "message": str(err)},
                     }
                 )
             await asyncio.sleep(batch_delay_s)
@@ -239,14 +273,47 @@ async def main_async(args: argparse.Namespace) -> int:
                 "results may not be meaningful for this integration.",
                 model,
             )
+        host = target.get("bindDomain")
+        if host:
+            _LOG.info("Using bindDomain=%s for command routing.", host)
+        else:
+            _LOG.warning(
+                "No bindDomain in device record; sendCommand will use the default "
+                "path and may return HTTP 404. Run with -v to inspect the record."
+            )
 
-        await _preflight(cloud, args.did)
+        await _preflight(cloud, args.did, host)
+
+        if args.candidates_only:
+            seen: set[tuple[int, int]] = set()
+            targets: list[dict[str, int]] = []
+            for entries in MF10_PROPERTY_CANDIDATES.values():
+                for e in entries:
+                    key = (e["siid"], e["piid"])
+                    if key not in seen:
+                        seen.add(key)
+                        targets.append({"siid": key[0], "piid": key[1]})
+            _LOG.info("Mode: candidates-only — %d unique (siid, piid) probes.", len(targets))
+            mode = "candidates"
+        else:
+            _LOG.warning(
+                "Mode: range scan — Dreame returns ~8s/request for unknown "
+                "properties, so siid %d..%d × piid %d..%d will take a long time. "
+                "Use --candidates-only unless you really need this.",
+                args.siid_min, args.siid_max, args.piid_min, args.piid_max,
+            )
+            targets = [
+                {"siid": s, "piid": p}
+                for s in range(args.siid_min, args.siid_max + 1)
+                for p in range(args.piid_min, args.piid_max + 1)
+            ]
+            mode = "range"
 
         results = await _scan(
             cloud,
             args.did,
-            range(args.siid_min, args.siid_max + 1),
-            range(args.piid_min, args.piid_max + 1),
+            host,
+            targets,
             args.batch_size,
             args.batch_delay_ms / 1000.0,
         )
@@ -258,6 +325,7 @@ async def main_async(args: argparse.Namespace) -> int:
                 "region": args.region,
                 "timestamp_utc": datetime.now(timezone.utc).isoformat(),
                 "scan_params": {
+                    "mode": mode,
                     "siid_min": args.siid_min,
                     "siid_max": args.siid_max,
                     "piid_min": args.piid_min,

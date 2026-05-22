@@ -101,17 +101,25 @@ class DreameCloud:
         self,
         did: str | int,
         properties: list[dict[str, int]],
+        host: str | None = None,
     ) -> list[dict[str, Any]]:
-        """Read MiOT properties. Returns the raw `result` list from Dreame."""
+        """Read MiOT properties. Returns the raw `result` list from Dreame.
+
+        `host` is the value of `bindDomain` from the device record returned
+        by `async_get_devices`. When set, the command URL gets a per-bind
+        suffix (e.g. `/dreame-iot-com-eu1/...`) — without it the EU backend
+        responds with HTTP 404.
+        """
         params = [
             {"did": str(did), "siid": p["siid"], "piid": p["piid"]} for p in properties
         ]
-        return await self._send_command(did, "get_properties", params) or []
+        return await self._send_command(did, "get_properties", params, host=host) or []
 
     async def async_set_properties(
         self,
         did: str | int,
         properties: list[dict[str, Any]],
+        host: str | None = None,
     ) -> list[dict[str, Any]]:
         """Write MiOT properties. Each prop must include siid, piid, value."""
         params = [
@@ -123,7 +131,7 @@ class DreameCloud:
             }
             for p in properties
         ]
-        return await self._send_command(did, "set_properties", params) or []
+        return await self._send_command(did, "set_properties", params, host=host) or []
 
     async def async_call_action(
         self,
@@ -131,10 +139,11 @@ class DreameCloud:
         siid: int,
         aiid: int,
         params: list | None = None,
+        host: str | None = None,
     ) -> dict[str, Any] | None:
         """Invoke a MiOT action."""
         payload = {"did": str(did), "siid": siid, "aiid": aiid, "in": params or []}
-        return await self._send_command(did, "action", payload)
+        return await self._send_command(did, "action", payload, host=host)
 
     # ----- internals -----------------------------------------------------
 
@@ -267,9 +276,14 @@ class DreameCloud:
         did: str | int,
         method: str,
         params: Any,
+        *,
+        host: str | None = None,
     ) -> Any:
         await self._ensure_token()
-        url = f"{self.api_url}/dreame-iot-com/device/sendCommand"
+        # `bindDomain` from listV2 routes the command to the bind cluster.
+        # Example: bindDomain="eu1.iot.dreame.tech" → path suffix "-eu1".
+        host_prefix = f"-{host.split('.')[0]}" if host else ""
+        url = f"{self.api_url}/dreame-iot-com{host_prefix}/device/sendCommand"
         payload = {
             "did": str(did),
             "id": 1,
