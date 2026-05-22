@@ -1,0 +1,312 @@
+"""Async Dreame Cloud API client for the MF10 integration.
+
+Adapted from CodyJon/dreame-ap10-integration (sync `requests` based) to async
+aiohttp for native Home Assistant compatibility.
+
+Endpoint shape (per region):
+    https://{region}.iot.dreame.tech:13267
+
+Auth flow:
+    POST /dreame-auth/oauth/token      OAuth2 password / refresh_token grant
+    POST /dreame-user-iot/iotuserbind/device/listV2   device list
+    POST /dreame-iot-com/device/sendCommand          MiOT-style RPC
+        methods: get_properties, set_properties, action
+
+Security:
+    - Passwords are MD5(password + DREAME_SALT) before being sent.
+    - access_token / refresh_token are kept in memory only.
+    - NOTHING sensitive is ever logged (no tokens, no passwords, no headers).
+"""
+
+from __future__ import annotations
+
+import asyncio
+import hashlib
+import logging
+import time
+from typing import Any
+
+import aiohttp
+
+_LOGGER = logging.getLogger(__name__)
+
+# Static constants extracted from the Dreamehome iOS app (reused as-is from the
+# upstream reverse-engineering by CodyJon). These are NOT secrets — they are
+# the public app identity sent by every Dreamehome client.
+_DREAME_SALT = "RAylYC%fmSKp7%Tq"
+_DREAME_USER_AGENT = "Dreame_Smarthome/2.1.9 (iPhone; iOS 18.4.1; Scale/3.00)"
+_DREAME_AUTH_BASIC = "Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg="
+_DREAME_TENANT_ID = "000000"
+_DREAME_RLC = "1c80b3787b2266776bcd"  # required header for cn region
+
+_DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=15)
+_TOKEN_REFRESH_MARGIN_S = 120
+
+
+class DreameAuthError(Exception):
+    """Authentication with Dreame Cloud failed (invalid credentials, etc.)."""
+
+
+class DreameConnectionError(Exception):
+    """Network / transport error talking to Dreame Cloud."""
+
+
+class DreameApiError(Exception):
+    """Dreame Cloud returned an unexpected response."""
+
+
+class DreameCloud:
+    """Async client for the Dreame Cloud API."""
+
+    def __init__(
+        self,
+        username: str,
+        password: str,
+        region: str,
+        session: aiohttp.ClientSession,
+    ) -> None:
+        self._username = username
+        self._password = password
+        self._region = region
+        self._session = session
+
+        self._access_token: str | None = None
+        self._refresh_token: str | None = None
+        self._uid: str | None = None
+        self._tenant_id: str = _DREAME_TENANT_ID
+        self._token_expire: float | None = None
+        self._lock = asyncio.Lock()
+
+    # ----- public API ----------------------------------------------------
+
+    @property
+    def api_url(self) -> str:
+        return f"https://{self._region}.iot.dreame.tech:13267"
+
+    async def async_login(self) -> None:
+        """Perform initial login. Raises on failure."""
+        await self._login()
+
+    async def async_get_devices(self) -> list[dict[str, Any]]:
+        """Return the list of devices bound to the account."""
+        await self._ensure_token()
+        url = f"{self.api_url}/dreame-user-iot/iotuserbind/device/listV2"
+        result = await self._post_json(url, json={}, retry_on_401=True)
+        try:
+            return result["data"]["page"]["records"] or []
+        except (KeyError, TypeError) as err:
+            raise DreameApiError(f"Unexpected devices payload shape: {err}") from err
+
+    async def async_get_properties(
+        self,
+        did: str | int,
+        properties: list[dict[str, int]],
+    ) -> list[dict[str, Any]]:
+        """Read MiOT properties. Returns the raw `result` list from Dreame."""
+        params = [
+            {"did": str(did), "siid": p["siid"], "piid": p["piid"]} for p in properties
+        ]
+        return await self._send_command(did, "get_properties", params) or []
+
+    async def async_set_properties(
+        self,
+        did: str | int,
+        properties: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Write MiOT properties. Each prop must include siid, piid, value."""
+        params = [
+            {
+                "did": str(did),
+                "siid": p["siid"],
+                "piid": p["piid"],
+                "value": p["value"],
+            }
+            for p in properties
+        ]
+        return await self._send_command(did, "set_properties", params) or []
+
+    async def async_call_action(
+        self,
+        did: str | int,
+        siid: int,
+        aiid: int,
+        params: list | None = None,
+    ) -> dict[str, Any] | None:
+        """Invoke a MiOT action."""
+        payload = {"did": str(did), "siid": siid, "aiid": aiid, "in": params or []}
+        return await self._send_command(did, "action", payload)
+
+    # ----- internals -----------------------------------------------------
+
+    def _auth_headers(self) -> dict[str, str]:
+        if not self._access_token:
+            raise DreameAuthError("No access token; login first")
+        headers = {
+            "User-Agent": _DREAME_USER_AGENT,
+            "Authorization": f"Bearer {self._access_token}",
+            "Tenant-Id": self._tenant_id,
+            "Content-Type": "application/json",
+            "Accept": "*/*",
+        }
+        if self._region == "cn":
+            headers["Dreame-Rlc"] = _DREAME_RLC
+        return headers
+
+    async def _ensure_token(self) -> None:
+        async with self._lock:
+            if self._access_token is None:
+                await self._login_locked()
+                return
+            if (
+                self._token_expire is not None
+                and time.time() > self._token_expire - _TOKEN_REFRESH_MARGIN_S
+            ):
+                await self._refresh_locked()
+
+    async def _login(self) -> None:
+        async with self._lock:
+            await self._login_locked()
+
+    async def _login_locked(self) -> None:
+        url = f"{self.api_url}/dreame-auth/oauth/token"
+        pw_hash = hashlib.md5(
+            (self._password + _DREAME_SALT).encode("utf-8")
+        ).hexdigest()
+        data = (
+            "platform=IOS&scope=all&grant_type=password"
+            f"&username={self._username}&password={pw_hash}&type=account"
+        )
+        headers = {
+            "User-Agent": _DREAME_USER_AGENT,
+            "Authorization": _DREAME_AUTH_BASIC,
+            "Tenant-Id": _DREAME_TENANT_ID,
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "*/*",
+        }
+        if self._region == "cn":
+            headers["Dreame-Rlc"] = _DREAME_RLC
+
+        try:
+            async with self._session.post(
+                url, headers=headers, data=data, timeout=_DEFAULT_TIMEOUT
+            ) as resp:
+                if resp.status != 200:
+                    body = await resp.text()
+                    if resp.status in (400, 401, 403):
+                        raise DreameAuthError(
+                            f"Login rejected (HTTP {resp.status}): {body[:200]}"
+                        )
+                    raise DreameApiError(
+                        f"Login failed (HTTP {resp.status}): {body[:200]}"
+                    )
+                result = await resp.json(content_type=None)
+        except aiohttp.ClientError as err:
+            raise DreameConnectionError(f"Cannot reach Dreame Cloud: {err}") from err
+        except asyncio.TimeoutError as err:
+            raise DreameConnectionError("Timeout talking to Dreame Cloud") from err
+
+        if "access_token" not in result:
+            # Do NOT log result wholesale — may include error context with PII.
+            raise DreameAuthError("Login response missing access_token")
+
+        self._access_token = result["access_token"]
+        self._refresh_token = result.get("refresh_token")
+        self._uid = result.get("uid")
+        self._tenant_id = result.get("tenant_id") or _DREAME_TENANT_ID
+        self._token_expire = time.time() + int(result.get("expires_in", 3600))
+        _LOGGER.debug("Dreame login OK (region=%s)", self._region)
+        if self._region == "ru":
+            _LOGGER.info(
+                "Dreame region 'ru' is unverified by upstream — endpoint may not exist; "
+                "if you see connectivity issues, try a different region"
+            )
+
+    async def _refresh_locked(self) -> None:
+        if not self._refresh_token:
+            await self._login_locked()
+            return
+
+        url = f"{self.api_url}/dreame-auth/oauth/token"
+        data = (
+            "platform=IOS&scope=all&grant_type=refresh_token"
+            f"&refresh_token={self._refresh_token}"
+        )
+        headers = {
+            "User-Agent": _DREAME_USER_AGENT,
+            "Authorization": _DREAME_AUTH_BASIC,
+            "Tenant-Id": self._tenant_id,
+            "Content-Type": "application/x-www-form-urlencoded",
+        }
+        try:
+            async with self._session.post(
+                url, headers=headers, data=data, timeout=_DEFAULT_TIMEOUT
+            ) as resp:
+                if resp.status != 200:
+                    _LOGGER.debug("Token refresh non-200 (%s), falling back to login", resp.status)
+                    await self._login_locked()
+                    return
+                result = await resp.json(content_type=None)
+        except (aiohttp.ClientError, asyncio.TimeoutError) as err:
+            _LOGGER.warning("Token refresh failed (%s), retrying login", type(err).__name__)
+            await self._login_locked()
+            return
+
+        if "access_token" not in result:
+            await self._login_locked()
+            return
+        self._access_token = result["access_token"]
+        self._refresh_token = result.get("refresh_token") or self._refresh_token
+        self._token_expire = time.time() + int(result.get("expires_in", 3600))
+
+    async def _send_command(
+        self,
+        did: str | int,
+        method: str,
+        params: Any,
+    ) -> Any:
+        await self._ensure_token()
+        url = f"{self.api_url}/dreame-iot-com/device/sendCommand"
+        payload = {
+            "did": str(did),
+            "id": 1,
+            "data": {"did": str(did), "id": 1, "method": method, "params": params},
+        }
+        result = await self._post_json(url, json=payload, retry_on_401=True)
+        if result.get("code") != 0:
+            raise DreameApiError(
+                f"Command {method} failed: code={result.get('code')}"
+            )
+        data = result.get("data") or {}
+        if "result" in data:
+            return data["result"]
+        if result.get("success"):
+            return {"code": 0}
+        return None
+
+    async def _post_json(
+        self,
+        url: str,
+        *,
+        json: dict[str, Any],
+        retry_on_401: bool,
+    ) -> dict[str, Any]:
+        try:
+            async with self._session.post(
+                url,
+                headers=self._auth_headers(),
+                json=json,
+                timeout=_DEFAULT_TIMEOUT,
+            ) as resp:
+                if resp.status == 401 and retry_on_401:
+                    await self._login()
+                    return await self._post_json(url, json=json, retry_on_401=False)
+                if resp.status != 200:
+                    body = await resp.text()
+                    raise DreameApiError(
+                        f"HTTP {resp.status} from {url}: {body[:200]}"
+                    )
+                return await resp.json(content_type=None)
+        except aiohttp.ClientError as err:
+            raise DreameConnectionError(str(err)) from err
+        except asyncio.TimeoutError as err:
+            raise DreameConnectionError(f"Timeout calling {url}") from err

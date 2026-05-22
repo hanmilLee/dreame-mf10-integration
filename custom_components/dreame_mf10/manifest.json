@@ -1,0 +1,12 @@
+{
+  "domain": "dreame_mf10",
+  "name": "Dreame Bladeless Fan MF10",
+  "codeowners": ["@xmavgithub"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "TODO-set-real-url-before-publishing",
+  "issue_tracker": "TODO-set-real-url-before-publishing",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "0.1.0"
+}

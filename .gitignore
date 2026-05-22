@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+.env.*
+!.env.example
+
+# Credenziali e segreti
+secrets*
+*.local.json
+*.secret.json
+credentials*.json
+
+# Snapshot di discovery (possono contenere DID/MAC/dati device)
+research/snapshots/*.json
+research/diffs/*.txt
+research/diffs/*.json
+!research/snapshots/.gitkeep
+!research/diffs/.gitkeep
+!research/snapshots/example.json
+!research/diffs/example.txt
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Home Assistant test sandbox
+.HA_VERSION
+home-assistant.log*
+.storage/

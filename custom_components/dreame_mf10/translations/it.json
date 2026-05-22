@@ -1,0 +1,32 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Dreame MF10",
+        "description": "Accedi con il tuo account Dreamehome per scoprire il ventilatore Dreame Bladeless Fan MF10.",
+        "data": {
+          "username": "Email / Username",
+          "password": "Password",
+          "region": "Regione"
+        }
+      },
+      "pick_device": {
+        "title": "Seleziona dispositivo",
+        "description": "Il tuo account ha più di un Dreame MF10 supportato. Scegli quale aggiungere.",
+        "data": {
+          "did": "Dispositivo"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Credenziali Dreamehome non valide.",
+      "cannot_connect": "Impossibile raggiungere il cloud Dreame. Controlla la connessione e la regione selezionata.",
+      "no_supported_devices": "Nessun Dreame MF10 (dreame.fan.u2519) trovato su questo account.",
+      "unknown": "Errore inatteso. Controlla i log di Home Assistant."
+    },
+    "abort": {
+      "already_configured": "Questo dispositivo è già configurato.",
+      "no_supported_devices": "Nessun Dreame MF10 (dreame.fan.u2519) trovato su questo account."
+    }
+  }
+}
