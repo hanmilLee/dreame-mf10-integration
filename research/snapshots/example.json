@@ -1,0 +1,43 @@
+{
+  "metadata": {
+    "model": "dreame.fan.u2519",
+    "did": "<REDACTED>",
+    "region": "eu",
+    "timestamp_utc": "2026-05-22T15:38:55.000000+00:00",
+    "scan_params": {
+      "mode": "candidates",
+      "siid_min": 1,
+      "siid_max": 10,
+      "piid_min": 1,
+      "piid_max": 30,
+      "batch_size": 1,
+      "batch_delay_ms": 200
+    },
+    "label": "example-redacted"
+  },
+  "results": [
+    { "siid": 2, "piid": 1, "code": 0, "value": 1 },
+    { "siid": 2, "piid": 2, "code": 0, "value": 0 },
+    { "siid": 2, "piid": 3, "code": 0, "value": 3 },
+    { "siid": 2, "piid": 4, "code": 0, "value": 5 },
+    { "siid": 2, "piid": 5, "code": 0, "value": 0 },
+    {
+      "siid": 3, "piid": 1, "code": null,
+      "error": { "kind": "envelope_rejected", "envelope_code": 80001, "message": "Command get_properties failed: code=80001" }
+    },
+    { "siid": 3, "piid": 2, "code": 0, "value": 24 },
+    {
+      "siid": 3, "piid": 3, "code": null,
+      "error": { "kind": "envelope_rejected", "envelope_code": 80001, "message": "Command get_properties failed: code=80001" }
+    },
+    {
+      "siid": 6, "piid": 5, "code": null,
+      "error": { "kind": "envelope_rejected", "envelope_code": 80001, "message": "Command get_properties failed: code=80001" }
+    },
+    {
+      "siid": 6, "piid": 8, "code": null,
+      "error": { "kind": "envelope_rejected", "envelope_code": 80001, "message": "Command get_properties failed: code=80001" }
+    },
+    { "siid": 6, "piid": 7, "code": 0, "value": 1 }
+  ]
+}

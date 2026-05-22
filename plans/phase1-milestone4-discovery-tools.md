@@ -1,6 +1,12 @@
 # Phase 1 — Milestone 4: Discovery tools (eseguito fuori ordine)
 
-## Status: CODE COMPLETE 2026-05-22 — pending runtime test by user
+## Status: DONE 2026-05-22
+
+Property map validata empiricamente: power (2,1), mode (2,3), fan_speed (2,4), child_lock (2,5),
+temperature (3,2). Modalità: 0=AI, 1=Potente, 2=Sonno, 3=Manuale, 7=Naturale.
+`MF10_PROPERTY_MAP` in `const.py` popolato. `docs/property_map.md` scritto.
+Bug trovati e fixati durante runtime: bindDomain routing (404 senza), candidates-only mode
+(brute-force impraticabile per latenza 8s/request su property sconosciute).
 
 - `tools/scan_properties.py` + `tools/diff_properties.py` + `tools/README.md` scritti.
 - `diff_properties.py` smoke testato con snapshot sintetici (cambi rilevati, modalità testo + JSON OK).

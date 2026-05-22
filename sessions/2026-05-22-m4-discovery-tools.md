@@ -38,6 +38,76 @@ Seconda sessione di sviluppo. M0 chiusa (smoke test verde, push su `main` con co
   6. Scrivere `research/snapshots/example.json` redacted dal primo scan reale.
 - **Range di scan**: default `siid 1..10, piid 1..30`. Da rivedere se i risultati mostrano property fuori range (improbabile per un fan).
 
+## Discovery property map — risultati sessione
+
+### Bug trovati al primo run reale
+
+1. **HTTP 404 su sendCommand** — root cause: endpoint Dreame non è `/dreame-iot-com/device/sendCommand`
+   ma `/dreame-iot-com-<prefix>/device/sendCommand`, dove `<prefix>` è il primo segmento di
+   `bindDomain` (campo `"bindDomain"` nel record device da `listV2`).
+   Ex: `bindDomain=10000.mt.eu.iot.dreame.tech:19973` → `host_prefix="-10000"`.
+   Fix applicato a `dreame_cloud.py` + `scan_properties.py`.
+
+2. **Brute-force range scan impraticabile** — latenza ~8s/request per property sconosciute
+   (backend forwarda al device fisico per discovery). 300 property × 8s = ~40 minuti.
+   Dreame rigetta l'intera envelope con `code=80001` per property inesistenti (no per-item
+   tolerance). Pivot: aggiunto `--candidates-only` (default raccomandato), scan solo ~11
+   property in ~36s. Brute-force rimane opt-in con warning.
+
+### Cicli before/after eseguiti
+
+| Test | (siid,piid) changed | finding |
+|------|---------------------|---------|
+| OFF → ON | (2,1): 2→1, (2,4): 6→8 | power=ON=1, power=OFF=2 |
+| ON → OFF | (2,1): 1→2, (2,4): 8→6 | confermato |
+| → Sleep mode | (2,3): 0→2, (2,4): 8→1 | mode sleep=2 |
+| → Manuale speed 5 | (2,3): 2→3, (2,4): 1→5 | mode manual=3, speed=(2,4) confermato |
+| → Naturale | (2,3): 3→7, (2,4): 5→2 | mode natural=7 |
+| → Potente | (2,3): 7→1, (2,4): 2→10 | mode powerful=1 |
+| Child lock ON | (2,5): 0→1 | child_lock=(2,5) |
+| Child lock OFF | (2,5): 1→0 | confermato, unica variazione |
+
+Temperatura (3,2) = sensore ambient confermato (drift naturale tra scan, indipendente da azioni).
+
+### Property map risultante
+
+| property | siid | piid | valori |
+|----------|------|------|--------|
+| power | 2 | 1 | 1=ON, 2=OFF |
+| mode | 2 | 3 | 0=AI, 1=Potente, 2=Sonno, 3=Manuale, 7=Naturale |
+| fan_speed | 2 | 4 | int 1–10 |
+| child_lock | 2 | 5 | 0=OFF, 1=ON |
+| temperature | 3 | 2 | °C read-only |
+
+Non identificati: (2,2) sempre 0, (6,7) sempre 1 (non è child_lock).
+Invalidi: (3,1), (3,3), (6,5), (6,8) → 80001 su tutti i test.
+
+### Aggiornamenti a codice e documentazione
+
+- `const.py`: `MF10_PROPERTY_MAP` popolato, enum `MF10_MODE_*`, dict `MF10_MODE_OPTIONS`.
+- `docs/property_map.md`: creato con tabelle property, mode, metodologia discovery, target non identificati.
+- `research/snapshots/example.json`: creato redacted (did=`<REDACTED>`) per documentare shape snapshot.
+
+### Seconda tornata discovery — oscillazione e siid 6
+
+Espanso `MF10_PROPERTY_CANDIDATES` con siid 2 piid 6–10 e siid 6 piid 1–7 (esclusi 3,6 invalidi).
+
+| Test | finding |
+|------|---------|
+| Oscillazione OFF → ON | (2,7): 0→1 → **oscillazione=(2,7)** confermato |
+
+Valori nuovi (scan oscillazione ON, 17 property totali, 14 valide):
+- (2,6)=3 in entrambi gli stati (OFF e ON) → non è il toggle; ipotesi: angolo/ampiezza oscillazione
+- (2,8)=0 sempre
+- (2,10)=1 sempre
+- (6,1)="Europe/Rome" → timezone device (read-only sistema, non polled)
+- (6,2)="" → stringa vuota (nome device non impostato?)
+- (6,4)=0 sempre
+- (6,7)=1 sempre (non è child_lock — quello è (2,5))
+
+`MF10_PROPERTY_MAP` aggiornato con `oscillation: {siid:2, piid:7}`.
+`docs/property_map.md` aggiornato.
+
 ## Prossimi passi
 
 1. Runtime test del tool (utente).
