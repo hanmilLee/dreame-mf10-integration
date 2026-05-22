@@ -1,0 +1,12 @@
+# Minimal Home Assistant configuration for the Dreame MF10 sandbox.
+# This file is intentionally tiny — UI-driven setup is preferred for the
+# integration itself (config flow). Add custom YAML only when needed for
+# debugging.
+
+default_config:
+
+# Enable verbose logging for the integration under development.
+logger:
+  default: info
+  logs:
+    custom_components.dreame_mf10: debug

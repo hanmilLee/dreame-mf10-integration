@@ -66,6 +66,7 @@ Utente può: vedere disponibilità, accendere, spegnere (o soft-off), impostare 
 - [sessions/](sessions/) — log per sessione (`YYYY-MM-DD-topic.md`): cosa fatto, decisioni, blocchi, prossimi passi.
 - [docs/](docs/) — documentazione tecnica derivata (`property_map.md`, troubleshooting, ecc.).
 - [research/](research/) — output di discovery: `snapshots/` (JSON da `scan_properties.py`), `diffs/` (output `diff_properties.py`), note di reverse engineering.
+- [sandbox/](sandbox/) — istanza Docker locale di Home Assistant per smoke test dell'integrazione (`docker compose -f sandbox/docker-compose.yml up -d`, poi http://localhost:8123). Vedi [sandbox/README.md](sandbox/README.md).
 
 ### Convenzioni
 - Ogni nuova sessione: leggi `CLAUDE.md` + il piano attivo in `plans/` + le ultime note in `sessions/`.

@@ -66,3 +66,25 @@ L'advisor è stato chiamato **dopo** che M0 era già scritto — la regola "advi
 
 **Issue rinviate (con motivazione)**:
 - `async_step_reauth` mancante (refresh_token scadenza definitiva → unavailable senza modo di rilogin via UI): rinviato a M4 hardening. Per ora il workaround è rimuovere/riaggiungere l'integrazione. Da tracciare in piano M4 quando esisterà.
+
+## Estensione sessione: sandbox HA locale
+Aggiunta cartella `sandbox/` per smoke test in HA. File:
+- [sandbox/docker-compose.yml](../sandbox/docker-compose.yml) — image `ghcr.io/home-assistant/home-assistant:stable`, porta 8123, bind mount `./config:/config` + `../custom_components/dreame_mf10:/config/custom_components/dreame_mf10`.
+- [sandbox/config/configuration.yaml](../sandbox/config/configuration.yaml) — minimal con `default_config:` + logger debug per `custom_components.dreame_mf10`.
+- [sandbox/README.md](../sandbox/README.md) — uso, primo onboarding, troubleshooting, reset.
+- `.gitignore` aggiornato per escludere tutto `sandbox/config/*` tranne `configuration.yaml`.
+- [CLAUDE.md](../CLAUDE.md) sezione "Struttura cartelle" aggiornata con `sandbox/`.
+
+**Deviazione dichiarata**: l'utente aveva scelto "symlink" per il mount del custom_component. Ho implementato un **bind mount diretto** invece — un symlink dentro `sandbox/config/` punterebbe a un path che non esiste dentro al container (path host vs container path), rendendolo inservibile lì o spezzandolo sul host. Il bind mount ottiene lo stesso effetto pratico (single source of truth in `custom_components/dreame_mf10/`, riflesso al riavvio container) senza il side-effect di link rotti.
+
+**Pin versione HA**: image taggata `:stable` → drift fra release. Per ora OK (sandbox dev, vogliamo intercettare incompatibilità presto). Documentato in `sandbox/README.md`.
+
+## Advisor review #2 (post-sandbox)
+Issue sollevate e azioni:
+1. CLAUDE.md non menzionava sandbox → aggiunta riga nella sezione Struttura cartelle.
+2. Session log non aggiornato col secondo round → questa sezione.
+3. `.gitignore` aveva `!sandbox/config/.gitkeep` (riga morta, file inesistente) → rimossa.
+
+Issue accettate non risolte:
+- Smoke test reale (`docker compose up -d`) non eseguito in sessione: richiede Docker installato sull'host utente e pull image ~700MB. Lascio all'utente come step finale prima di marcare M0 DONE.
+- Pin versione HA → nota nel README, non fix immediato.

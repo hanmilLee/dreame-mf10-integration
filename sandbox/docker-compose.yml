@@ -1,0 +1,20 @@
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: dreame_mf10_sandbox_ha
+    environment:
+      TZ: Europe/Rome
+    volumes:
+      # Persistent HA config (storage, db, logs) — gitignored except for
+      # configuration.yaml that we commit as a seed.
+      - ./config:/config
+      # Live-mount the integration under development so edits on the host
+      # are visible to HA after a container restart. No symlinks involved:
+      # this is a direct bind mount so it works cross-platform.
+      - ../custom_components/dreame_mf10:/config/custom_components/dreame_mf10
+    ports:
+      - "8123:8123"
+    restart: unless-stopped
+    # Networking: default bridge is fine — HA needs to reach the public
+    # Dreame cloud (https://{region}.iot.dreame.tech:13267). If you are
+    # behind a corporate proxy, add http_proxy/https_proxy env vars here.

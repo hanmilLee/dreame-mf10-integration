@@ -29,7 +29,10 @@ research/diffs/*.json
 .vscode/
 *.swp
 
-# Home Assistant test sandbox
+# Home Assistant test sandbox (sandbox/config/ runtime state)
 .HA_VERSION
 home-assistant.log*
+home-assistant_v2.db*
 .storage/
+sandbox/config/*
+!sandbox/config/configuration.yaml
