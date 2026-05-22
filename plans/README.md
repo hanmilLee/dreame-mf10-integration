@@ -11,3 +11,8 @@ Piani di lavoro per fase/milestone. Un file per blocco di lavoro coerente.
 ## Roadmap (da spec)
 - M0 Setup repo · M1 Cloud login + discovery · M2 Polling property candidate · M3 Fan entity minima
 - M4 Script discovery · M5 Property map confermata · M6 Entità avanzate · M7 Packaging HACS
+
+### Ordine effettivo di esecuzione
+- M0 + M1 fusi e chiusi 2026-05-22 (cloud client async + config flow validante in unico commit).
+- **M4 anticipato a 2026-05-22** prima di M2/M3: validare la property map offline via CLI prima di costruirvi sopra coordinator/entity. Vedi [phase1-milestone4-discovery-tools.md](phase1-milestone4-discovery-tools.md).
+- Prossimo: M2 (coordinator) una volta che la mappa è confermata.
