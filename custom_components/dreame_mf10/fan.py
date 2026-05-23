@@ -89,11 +89,11 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
             return None
         if power != MF10_POWER_ON:
             return False
-        # Soft-off: device stays on power=1 at Sleep+speed=1 to keep WiFi alive.
-        # Report as "off" so HA state matches user intent.
+        # Soft-off: device stays on power=1 in Sleep mode to keep WiFi alive.
+        # Setting speed=1 explicitly forces the device to Manual mode (not Sleep),
+        # so we only check mode here — speed is irrelevant for the off condition.
         mode = self.coordinator.data.get("mode")
-        speed = self.coordinator.data.get("fan_speed")
-        if mode == MF10_MODE_SLEEP and speed is not None and speed <= MF10_SPEED_MIN:
+        if mode == MF10_MODE_SLEEP:
             return False
         return True
 
@@ -144,12 +144,11 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        # Soft-off: keep power=1 (WiFi stays connected) but set Sleep+speed=1.
+        # Soft-off: keep power=1 (WiFi stays connected), set mode=Sleep only.
+        # Setting speed explicitly causes the device to switch to Manual mode and
+        # ignore the Sleep mode assignment — send mode alone to avoid this.
         # Real power=2 disconnects WiFi → device unreachable until physical power-on.
-        await self.coordinator.async_set_properties([
-            _prop("mode", MF10_MODE_SLEEP),
-            _prop("fan_speed", MF10_SPEED_MIN),
-        ])
+        await self.coordinator.async_set_properties([_prop("mode", MF10_MODE_SLEEP)])
         await self.coordinator.async_request_refresh()
 
     async def async_set_percentage(self, percentage: int) -> None:
