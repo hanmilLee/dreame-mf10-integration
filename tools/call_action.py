@@ -13,6 +13,11 @@ Optional:         DREAME_REGION (default: eu)
 
 WARNING: actions and property writes can physically move the device (rotate
 blades, change state, reset configuration). Use only for explicit testing.
+
+KNOWN DANGEROUS ACTIONS (dreame.fan.u2519):
+    siid=2, aiid=1 → code=0 ma causa reset WiFi del device (re-pairing richiesto)
+    siid=2, aiid=2 → code=0 ma causa reset WiFi del device (re-pairing richiesto)
+    NON richiamare queste action senza intenzione esplicita.
 """
 
 from __future__ import annotations

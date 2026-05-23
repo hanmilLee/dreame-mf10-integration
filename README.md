@@ -35,17 +35,16 @@ is designed to support more via a model-capability map later.
 | `fan.dreame_mf10`                | `fan`    | Main fan control (on/off, speed, mode, oscillation) |
 | `sensor.dreame_mf10_temperatura` | `sensor` | Ambient temperature (°C, read-only)                 |
 
-## Off behavior (soft-off)
+## Off behavior
 
-The MF10 disconnects from WiFi when fully powered off (power=2), making it
-unreachable via cloud until physically turned on again. To avoid this, the
-integration uses **soft-off**: instead of sending `power=2`, it sets the
-device to Sleep mode at speed 1. The device stays connected to the cloud and
-HA reports it as "off". Turning on from HA restores AI mode.
+The `power` property (siid=2, piid=1) cannot be written via the Dreame cloud
+relay — both `power=1` and `power=2` return code=80001. Turning off from HA
+sets the device to **Night mode** (fan at minimum speed, device stays cloud-connected
+and can be woken remotely). Turning on from HA restores AI mode.
 
-Consequence: the device is never truly off while HA is running — it runs at
-minimum speed in Sleep mode. This is the same behavior as CodyJon's
-dreame-ap10-integration and is required for reliable remote control.
+Consequence: the device is never truly off while HA is running. The fan runs
+at minimum speed in Night mode. This matches the behavior of similar Dreame
+fan integrations.
 
 ## What does NOT work yet
 

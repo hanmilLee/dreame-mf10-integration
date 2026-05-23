@@ -88,14 +88,14 @@ MF10_PROPERTY_MAP: dict[str, dict] = {
 # Fan mode enum values (for MF10_PROPERTY_MAP["mode"])
 MF10_MODE_AI = 0
 MF10_MODE_POWERFUL = 1
-MF10_MODE_SLEEP = 2
+MF10_MODE_NIGHT = 2
 MF10_MODE_MANUAL = 3
 MF10_MODE_NATURAL = 7
 
 MF10_MODE_OPTIONS: dict[int, str] = {
     MF10_MODE_AI: "ai",
     MF10_MODE_POWERFUL: "powerful",
-    MF10_MODE_SLEEP: "sleep",
+    MF10_MODE_NIGHT: "night",
     MF10_MODE_MANUAL: "manual",
     MF10_MODE_NATURAL: "natural",
 }

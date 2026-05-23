@@ -22,9 +22,8 @@ from .const import (
     MODEL_MF10,
     MF10_MODE_AI,
     MF10_MODE_NAME_TO_VALUE,
+    MF10_MODE_NIGHT,
     MF10_MODE_OPTIONS,
-    MF10_MODE_SLEEP,
-    MF10_POWER_ON,
     MF10_PROPERTY_MAP,
     MF10_SPEED_MAX,
     MF10_SPEED_MIN,
@@ -84,18 +83,12 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
 
     @property
     def is_on(self) -> bool | None:
-        power = self.coordinator.data.get("power")
-        if power is None:
+        if self.coordinator.data.get("power") is None:
             return None
-        if power != MF10_POWER_ON:
-            return False
-        # Soft-off: device stays on power=1 in Sleep mode to keep WiFi alive.
-        # Setting speed=1 explicitly forces the device to Manual mode (not Sleep),
-        # so we only check mode here — speed is irrelevant for the off condition.
         mode = self.coordinator.data.get("mode")
-        if mode == MF10_MODE_SLEEP:
-            return False
-        return True
+        if mode is None:
+            return None
+        return mode != MF10_MODE_NIGHT
 
     @property
     def percentage(self) -> int | None:
@@ -128,7 +121,7 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
         preset_mode: str | None = None,
         **kwargs: Any,
     ) -> None:
-        props = [_prop("power", MF10_POWER_ON)]
+        props = []
         if percentage is not None:
             speed = math.ceil(percentage_to_ranged_value(_SPEED_RANGE, percentage))
             props.append(_prop("fan_speed", speed))
@@ -137,18 +130,16 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
             if mode_val is None:
                 raise HomeAssistantError(f"Unknown preset mode: {preset_mode}")
             props.append(_prop("mode", mode_val))
-        elif percentage is None:
-            # No mode or speed specified: exit soft-off by restoring AI mode.
+        else:
             props.append(_prop("mode", MF10_MODE_AI))
         await self.coordinator.async_set_properties(props)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        # Soft-off: keep power=1 (WiFi stays connected), set mode=Sleep only.
-        # Setting speed explicitly causes the device to switch to Manual mode and
-        # ignore the Sleep mode assignment — send mode alone to avoid this.
-        # Real power=2 disconnects WiFi → device unreachable until physical power-on.
-        await self.coordinator.async_set_properties([_prop("mode", MF10_MODE_SLEEP)])
+        # power property is not writable via cloud relay (code=80001).
+        # Night mode is the effective off: fan runs at minimum, device stays
+        # connected and can be woken remotely.
+        await self.coordinator.async_set_properties([_prop("mode", MF10_MODE_NIGHT)])
         await self.coordinator.async_request_refresh()
 
     async def async_set_percentage(self, percentage: int) -> None:

@@ -10,7 +10,7 @@ Firmware: 1035 / Plugin 104
 
 | Property | siid | piid | Type | Values |
 |----------|------|------|------|--------|
-| power | 2 | 1 | int | 1 = ON, 2 = OFF |
+| power | 2 | 1 | int | 1 = ON, 2 = OFF — **read-only via cloud relay** (set_properties → code=80001) |
 | mode | 2 | 3 | int | see mode table below |
 | fan_speed | 2 | 4 | int | 1–10 (min–max) |
 | child_lock | 2 | 5 | int | 0 = OFF, 1 = ON |
@@ -19,16 +19,30 @@ Firmware: 1035 / Plugin 104
 
 ### Mode values (siid=2, piid=3)
 
-| Value | Label (app IT) | Label (code) |
-|-------|----------------|--------------|
-| 0 | Automatica (AI) | `ai` |
-| 1 | Potente | `powerful` |
-| 2 | Sonno | `sleep` |
-| 3 | Manuale | `manual` |
-| 7 | Naturale | `natural` |
+| Value | Label (app IT) | Label (code) | Display |
+|-------|----------------|--------------|---------|
+| 0 | Automatica (AI) | `ai` | `F1` |
+| 1 | Potente | `powerful` | `F4` |
+| 2 | Sonno | `night` | `F2` |
+| 3 | Manuale | `manual` | velocità (es. `5`) |
+| 7 | Naturale | `natural` | `F3` |
 
 Note: values are non-contiguous (0–3, then 7). No mode at 4, 5, 6 visible
 from the Dreamehome app. Other values may exist but are unreachable from UI.
+
+### Display codes (LED sul device)
+
+I codici `F1`–`F4` sul display fisico indicano la modalità attiva — **non sono errori**:
+
+| Display | Modalità | MiOT value |
+|---------|----------|------------|
+| `F1` | AI (automatica) | 0 |
+| `F2` | Sonno (Sleep) | 2 |
+| `F3` | Naturale | 7 |
+| `F4` | Potente | 1 |
+| numero (es. `5`) | Manuale — mostra la velocità corrente | 3 |
+
+In modalità Manuale il display mostra la velocità (1–10), non un codice F.
 
 ### Power off behavior
 
