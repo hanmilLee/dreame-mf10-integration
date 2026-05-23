@@ -28,6 +28,8 @@ DEFAULT_OFF_BEHAVIOR = OFF_BEHAVIOR_REAL
 MF10_SPEED_MIN = 1
 MF10_SPEED_MAX = 10
 
+PLATFORMS: list[str] = ["sensor"]
+
 # Provisional MiOT property candidates for dreame.fan.u2519.
 # These are NOT validated — they must be confirmed via discovery (tools/scan_properties.py)
 # before being promoted into MF10_PROPERTY_MAP.

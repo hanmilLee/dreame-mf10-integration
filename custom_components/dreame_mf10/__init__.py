@@ -1,37 +1,60 @@
-"""The Dreame MF10 integration.
-
-Milestone 0 / 1: config entry creation only. Coordinator and platforms
-(fan/sensor/switch/etc.) will be wired in later milestones.
-"""
+"""The Dreame MF10 integration."""
 
 from __future__ import annotations
 
 import logging
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_REGION, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN
+from .const import DOMAIN, PLATFORMS
+from .coordinator import MF10Coordinator
+from .dreame_cloud import DreameAuthError, DreameCloud, DreameConnectionError
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up a Dreame MF10 config entry."""
-    hass.data.setdefault(DOMAIN, {})
-    hass.data[DOMAIN][entry.entry_id] = {
-        "did": entry.data.get("did"),
-        "model": entry.data.get("model"),
-    }
-    _LOGGER.info(
-        "Dreame MF10 entry loaded (did=%s, model=%s) — coordinator/platforms not yet wired",
-        entry.data.get("did"),
-        entry.data.get("model"),
+    session = async_get_clientsession(hass)
+    cloud = DreameCloud(
+        username=entry.data[CONF_USERNAME],
+        password=entry.data[CONF_PASSWORD],
+        region=entry.data.get(CONF_REGION, "eu"),
+        session=session,
     )
+
+    try:
+        await cloud.async_login()
+        devices = await cloud.async_get_devices()
+    except DreameAuthError as err:
+        raise ConfigEntryNotReady(f"Authentication failed: {err}") from err
+    except DreameConnectionError as err:
+        raise ConfigEntryNotReady(f"Cannot reach Dreame Cloud: {err}") from err
+
+    did = entry.data["did"]
+    device = next((d for d in devices if str(d.get("did")) == did), None)
+    if device is None:
+        raise ConfigEntryNotReady(f"Device {did} not found in account device list")
+
+    host = device.get("bindDomain")
+    _LOGGER.debug("Device %s bindDomain=%s", did, host)
+
+    coordinator = MF10Coordinator(hass, cloud, did, host)
+    await coordinator.async_config_entry_first_refresh()
+
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a Dreame MF10 config entry."""
-    hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
-    return True
+    ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if ok:
+        hass.data.get(DOMAIN, {}).pop(entry.entry_id, None)
+    return ok
