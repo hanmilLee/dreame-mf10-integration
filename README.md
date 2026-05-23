@@ -35,8 +35,24 @@ is designed to support more via a model-capability map later.
 | `fan.dreame_mf10`                | `fan`    | Main fan control (on/off, speed, mode, oscillation) |
 | `sensor.dreame_mf10_temperatura` | `sensor` | Ambient temperature (°C, read-only)                 |
 
+## Off behavior (soft-off)
+
+The MF10 disconnects from WiFi when fully powered off (power=2), making it
+unreachable via cloud until physically turned on again. To avoid this, the
+integration uses **soft-off**: instead of sending `power=2`, it sets the
+device to Sleep mode at speed 1. The device stays connected to the cloud and
+HA reports it as "off". Turning on from HA restores AI mode.
+
+Consequence: the device is never truly off while HA is running — it runs at
+minimum speed in Sleep mode. This is the same behavior as CodyJon's
+dreame-ap10-integration and is required for reliable remote control.
+
 ## What does NOT work yet
 
+- **Turn on from full standby** — if the device was powered off physically
+  (or via the Dreamehome app real-off), HA cannot wake it remotely. Use the
+  physical button or the Dreamehome app to power it on first; HA takes over
+  from there.
 - `async_step_reauth` — if credentials expire while HA is running, the entry is marked REAUTH\_REQUIRED but no re-authentication UI is shown. Workaround: remove and re-add the integration.
 - Options flow — polling interval and off-behavior are not configurable in the UI yet.
 - Advanced entities (child lock switch, display switch, buzzer, angle, timer) — Phase 3.

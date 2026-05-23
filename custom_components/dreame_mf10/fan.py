@@ -20,9 +20,10 @@ from homeassistant.util.percentage import (
 from .const import (
     DOMAIN,
     MODEL_MF10,
+    MF10_MODE_AI,
     MF10_MODE_NAME_TO_VALUE,
     MF10_MODE_OPTIONS,
-    MF10_POWER_OFF,
+    MF10_MODE_SLEEP,
     MF10_POWER_ON,
     MF10_PROPERTY_MAP,
     MF10_SPEED_MAX,
@@ -86,7 +87,15 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
         power = self.coordinator.data.get("power")
         if power is None:
             return None
-        return power == MF10_POWER_ON
+        if power != MF10_POWER_ON:
+            return False
+        # Soft-off: device stays on power=1 at Sleep+speed=1 to keep WiFi alive.
+        # Report as "off" so HA state matches user intent.
+        mode = self.coordinator.data.get("mode")
+        speed = self.coordinator.data.get("fan_speed")
+        if mode == MF10_MODE_SLEEP and speed is not None and speed <= MF10_SPEED_MIN:
+            return False
+        return True
 
     @property
     def percentage(self) -> int | None:
@@ -128,11 +137,19 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
             if mode_val is None:
                 raise HomeAssistantError(f"Unknown preset mode: {preset_mode}")
             props.append(_prop("mode", mode_val))
+        elif percentage is None:
+            # No mode or speed specified: exit soft-off by restoring AI mode.
+            props.append(_prop("mode", MF10_MODE_AI))
         await self.coordinator.async_set_properties(props)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self.coordinator.async_set_properties([_prop("power", MF10_POWER_OFF)])
+        # Soft-off: keep power=1 (WiFi stays connected) but set Sleep+speed=1.
+        # Real power=2 disconnects WiFi → device unreachable until physical power-on.
+        await self.coordinator.async_set_properties([
+            _prop("mode", MF10_MODE_SLEEP),
+            _prop("fan_speed", MF10_SPEED_MIN),
+        ])
         await self.coordinator.async_request_refresh()
 
     async def async_set_percentage(self, percentage: int) -> None:
