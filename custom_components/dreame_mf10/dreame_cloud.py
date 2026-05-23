@@ -291,6 +291,11 @@ class DreameCloud:
         }
         result = await self._post_json(url, json=payload, retry_on_401=True)
         if result.get("code") != 0:
+            # code=80001 ("设备可能不在线，指令发送超时") = device unreachable for
+            # write commands. get_properties still works because the server returns
+            # cached values; set_properties/action require the device to be online
+            # and acknowledge within the server-side timeout.
+            _LOGGER.debug("Command %s failed: code=%s msg=%s", method, result.get("code"), result.get("msg", ""))
             raise DreameApiError(
                 f"Command {method} failed: code={result.get('code')}"
             )

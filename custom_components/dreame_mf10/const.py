@@ -28,7 +28,10 @@ DEFAULT_OFF_BEHAVIOR = OFF_BEHAVIOR_REAL
 MF10_SPEED_MIN = 1
 MF10_SPEED_MAX = 10
 
-PLATFORMS: list[str] = ["sensor"]
+PLATFORMS: list[str] = ["sensor", "fan"]
+
+MF10_POWER_ON = 1
+MF10_POWER_OFF = 2
 
 # Provisional MiOT property candidates for dreame.fan.u2519.
 # These are NOT validated — they must be confirmed via discovery (tools/scan_properties.py)
@@ -96,3 +99,4 @@ MF10_MODE_OPTIONS: dict[int, str] = {
     MF10_MODE_MANUAL: "manual",
     MF10_MODE_NATURAL: "natural",
 }
+MF10_MODE_NAME_TO_VALUE: dict[str, int] = {v: k for k, v in MF10_MODE_OPTIONS.items()}

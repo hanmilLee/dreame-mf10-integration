@@ -23,6 +23,9 @@ research/diffs/*.json
 !research/snapshots/example.json
 !research/diffs/example.txt
 
+# Repo di riferimento locali (clonati per consultazione offline)
+tmp/
+
 # Editor / OS
 .DS_Store
 .idea/

@@ -7,7 +7,7 @@ from datetime import timedelta
 from typing import Any
 
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from .const import DEFAULT_POLLING_INTERVAL, DOMAIN, MF10_PROPERTY_MAP
@@ -75,3 +75,12 @@ class MF10Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             data[name] = item.get("value")
 
         return data
+
+    async def async_set_properties(self, props: list[dict]) -> None:
+        """Write MiOT properties; raises HomeAssistantError on failure."""
+        try:
+            await self._cloud.async_set_properties(self._did, props, host=self._host)
+        except DreameAuthError as err:
+            raise ConfigEntryAuthFailed(err) from err
+        except (DreameConnectionError, DreameApiError) as err:
+            raise HomeAssistantError(str(err)) from err
