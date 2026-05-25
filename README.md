@@ -1,7 +1,7 @@
 # Dreame MF10 — Home Assistant Custom Integration
 
-> **Status: Phase 1 / Milestone 3 — Fan entity operational**
-> Login, polling, temperature sensor, and full fan control (on/off, speed, preset modes, oscillation) are implemented.
+> **Status: Phase 1 / Milestone 3 — Fan entity partially operational**
+> Login, polling, temperature sensor, speed, preset modes, and oscillation are implemented. On/off control via HA is currently non-functional (cloud relay blocks power writes).
 
 Custom Home Assistant integration for the **Dreame Bladeless Fan MF10** (`dreame.fan.u2519`).
 Cloud-first via the Dreamehome API. No local API is assumed.
@@ -21,10 +21,10 @@ is designed to support more via a model-capability map later.
 - Real authentication against the Dreame Cloud (no placeholder).
 - Discovery: only accounts containing `dreame.fan.u2519` succeed.
 - **Fan entity** (`fan.dreame_mf10`):
-  - Turn on / turn off
   - Speed control: 10 levels mapped to HA percentages (10 %–100 %)
   - Preset modes: `ai`, `powerful`, `sleep`, `manual`, `natural`
   - Oscillation toggle
+  - ⚠️ Turn on / turn off: **not working** (see Off behavior below)
 - **Temperature sensor** (`sensor.dreame_mf10_temperatura`): reads ambient °C.
 - Polling every 30 s; state refreshes immediately after every command.
 
@@ -37,21 +37,23 @@ is designed to support more via a model-capability map later.
 
 ## Off behavior
 
-The `power` property (siid=2, piid=1) cannot be written via the Dreame cloud
-relay — both `power=1` and `power=2` return code=80001. Turning off from HA
-sets the device to **Night mode** (fan at minimum speed, device stays cloud-connected
-and can be woken remotely). Turning on from HA restores AI mode.
+The `power` property (siid=2, piid=1) **cannot be written via the Dreame cloud
+relay** — both `power=1` and `power=2` return error code 80001. As a result,
+neither turning on nor turning off the device from HA works.
 
-Consequence: the device is never truly off while HA is running. The fan runs
-at minimum speed in Night mode. This matches the behavior of similar Dreame
-fan integrations.
+**Note:** Night mode is simply one of the fan's operating modes (alongside AI,
+Manual, Natural, Powerful). It has no relation to the on/off state and does not
+serve as a substitute for powering the device off.
+
+Use the **physical button** or the **Dreamehome app** to power the device on or off;
+HA can control speed, mode, and oscillation once the device is already running.
 
 ## What does NOT work yet
 
-- **Turn on from full standby** — if the device was powered off physically
-  (or via the Dreamehome app real-off), HA cannot wake it remotely. Use the
-  physical button or the Dreamehome app to power it on first; HA takes over
-  from there.
+- **Turn on / turn off** — the cloud relay blocks writes to the `power`
+  property (error 80001). Use the physical button or the Dreamehome app to
+  power the device on/off; HA controls speed, mode, and oscillation while
+  the device is running.
 - `async_step_reauth` — if credentials expire while HA is running, the entry is marked REAUTH\_REQUIRED but no re-authentication UI is shown. Workaround: remove and re-add the integration.
 - Options flow — polling interval and off-behavior are not configurable in the UI yet.
 - Advanced entities (child lock switch, display switch, buzzer, angle, timer) — Phase 3.
