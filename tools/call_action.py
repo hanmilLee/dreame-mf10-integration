@@ -1,11 +1,11 @@
 """CLI tool for testing MiOT actions and set_properties on the Dreame MF10.
 
 Usage:
-    # Test an action (aiid)
+    # Test an action (aiid) — richiede conferma interattiva
     python tools/call_action.py --siid 2 --aiid 3
     python tools/call_action.py --siid 2 --aiid 3 --params '[]'
 
-    # Test set_properties for a specific property
+    # Test set_properties for a specific property (nessuna conferma richiesta)
     python tools/call_action.py --set-prop --siid 2 --piid 4 --value 3
 
 Env vars required: DREAME_USERNAME, DREAME_PASSWORD
@@ -17,6 +17,7 @@ blades, change state, reset configuration). Use only for explicit testing.
 KNOWN DANGEROUS ACTIONS (dreame.fan.u2519):
     siid=2, aiid=1 → code=0 ma causa reset WiFi del device (re-pairing richiesto)
     siid=2, aiid=2 → code=0 ma causa reset WiFi del device (re-pairing richiesto)
+    siid=2, aiid=3 → causa reset WiFi del device (re-pairing richiesto) — confermato 2026-05-23
     NON richiamare queste action senza intenzione esplicita.
 """
 
@@ -71,6 +72,16 @@ async def main() -> None:
     if not args.set_prop and args.aiid is None:
         print("ERROR: provide --aiid for action call, or use --set-prop with --piid and --value")
         sys.exit(1)
+
+    # Require explicit interactive confirmation before sending any action.
+    # Actions can reset WiFi, move blades, or change device state irreversibly.
+    if not args.set_prop:
+        print(f"\n⚠️  ATTENZIONE: stai per eseguire l'action siid={args.siid} aiid={args.aiid}")
+        print("   Le action possono resettare il WiFi del device (re-pairing richiesto).")
+        confirm = input("   Digita 'esegui' per confermare: ").strip()
+        if confirm != "esegui":
+            print("Operazione annullata.")
+            sys.exit(0)
 
     username = os.environ.get("DREAME_USERNAME")
     password = os.environ.get("DREAME_PASSWORD")

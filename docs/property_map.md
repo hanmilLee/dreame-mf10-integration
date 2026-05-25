@@ -50,6 +50,20 @@ In modalità Manuale il display mostra la velocità (1–10), non un codice F.
 The "soft off" behavior (OFF_BEHAVIOR_SOFT: set speed to min before off)
 is deferred until `async_unload_entry` / options flow in M4 hardening.
 
+## Action map — siid=2 (tutte pericolose)
+
+Tutte le action testate su siid=2 causano reset WiFi del device (re-pairing richiesto).
+**Non eseguire action su questo siid senza estrema cautela.**
+
+| aiid | code risposta | Effetto osservato |
+|------|--------------|-------------------|
+| 1 | 0 | Reset WiFi — confermato 2026-05-23 |
+| 2 | 0 | Reset WiFi — confermato 2026-05-23 |
+| 3 | 80001 (timeout) | Reset WiFi — confermato 2026-05-23 |
+
+Note: AP10 usa `siid=2, aiid=3` come power toggle. Su MF10 questa action NON è power toggle.
+Il controllo on/off via action è inaccessibile. L'unica via cloud è Night mode come soft-off.
+
 ## Invalid candidates (envelope 80001)
 
 The following `(siid, piid)` pairs from `MF10_PROPERTY_CANDIDATES` were
