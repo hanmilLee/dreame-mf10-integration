@@ -14,6 +14,13 @@ secrets*
 *.secret.json
 credentials*.json
 
+# Network capture / debugging dumps (possono contenere token, cookies, payload)
+*.proxymansessionv2
+*.proxymansession
+*.har
+*.pcap
+*.pcapng
+
 # Snapshot di discovery (possono contenere DID/MAC/dati device)
 research/snapshots/*.json
 research/diffs/*.txt
