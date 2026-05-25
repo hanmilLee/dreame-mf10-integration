@@ -46,9 +46,9 @@ In modalità Manuale il display mostra la velocità (1–10), non un codice F.
 
 ### Power off behavior
 
-`set_properties(siid=2, piid=1, value=2)` → device stops (hard off).
-The "soft off" behavior (OFF_BEHAVIOR_SOFT: set speed to min before off)
-is deferred until `async_unload_entry` / options flow in M4 hardening.
+`set_properties(siid=2, piid=1, value=*)` → **non funziona via cloud relay** (errore 80001
+per qualsiasi valore). On/off non è controllabile da HA. Usare il tasto fisico o
+l'app Dreamehome.
 
 ## Action map — siid=2 (tutte pericolose)
 
@@ -62,7 +62,8 @@ Tutte le action testate su siid=2 causano reset WiFi del device (re-pairing rich
 | 3 | 80001 (timeout) | Reset WiFi — confermato 2026-05-23 |
 
 Note: AP10 usa `siid=2, aiid=3` come power toggle. Su MF10 questa action NON è power toggle.
-Il controllo on/off via action è inaccessibile. L'unica via cloud è Night mode come soft-off.
+Il controllo on/off è inaccessibile sia via property (80001) che via action (reset WiFi).
+Night mode è una modalità operativa del ventilatore, non un sostituto dello spegnimento.
 
 ## Invalid candidates (envelope 80001)
 
