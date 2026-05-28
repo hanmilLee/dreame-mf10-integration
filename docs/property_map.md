@@ -15,7 +15,13 @@ Firmware: 1035 / Plugin 104
 | fan_speed | 2 | 4 | int | 1–10 (min–max) |
 | child_lock | 2 | 5 | int | 0 = OFF, 1 = ON |
 | blade_oscillation | 2 | 6 | int | 0 = nessuna, 1 = sinistra, 2 = destra, 3 = entrambe |
-| oscillation | 2 | 7 | int | 0 = OFF, 1 = ON (master toggle) |
+| oscillation | 2 | 7 | int | sempre 0 in tutti i test — scopo non ancora identificato |
+| sync_oscillation | 2 | 11 | int | 0 = off, 1 = on (pale si muovono in sincrono) |
+| staggered_oscillation | 2 | 12 | int | 0 = off, 1 = on (pale sfasate) — si esclude con sync |
+| continuous_monitoring | 2 | 10 | int | 0 = off, 1 = on (TempSync / monitoraggio continuo) |
+| key_tone | 6 | 7 | int | 0 = off, 1 = on (tono tasti / beep) |
+| display | 6 | 11 | int | 0 = off, 1 = on (display LED) |
+| off_timer | 2 | 8 | int | 0 = disattivato, N = ore (timer spegnimento automatico) |
 | temperature | 3 | 2 | int | °C, read-only ambient sensor |
 
 ### Mode values (siid=2, piid=3)
@@ -104,14 +110,21 @@ probed and rejected by the backend (device doesn't expose them):
 | 6 | 5 | display_light |
 | 6 | 8 | display_light alt |
 
-## Unidentified (always constant, not yet mapped)
+## Unidentified (non ancora mappate)
 
-| siid | piid | observed value | hypothesis |
-|------|------|----------------|-----------|
-| 2 | 2 | always 0 | unknown — did not change across any test |
-| 2 | 8 | always 0 | unknown |
-| 2 | 10 | always 1 | unknown |
-| 6 | 7 | always 1 | NOT child_lock (confirmed) — possibly buzzer or display |
+| siid | piid | valore osservato | ipotesi |
+|------|------|-----------------|---------|
+| 2 | 2 | sempre 0 | sconosciuta — invariante in tutti i test |
+| 2 | 7 | sempre 0 | sconosciuta — invariante in tutti i test oscillazione |
+| 4 | 1 | sempre 100 | probabile angolo/range oscillazione orizzontale |
+| 4 | 2 | sempre 180 | probabile angolo/range oscillazione verticale (gradi) |
+| 6 | 4 | sempre 0 | sconosciuta |
+
+## Non rilevabile via get_properties
+
+| Feature | Nota |
+|---------|------|
+| Velocità oscillazione pale (standard/rapido) | Non muta alcuna property leggibile — probabilmente parametro contestuale nel comando oscillazione |
 
 ## Discovery methodology
 
@@ -144,13 +157,17 @@ Tests performed this session (2026-05-28):
 | Oscillazione pala sinistra OFF | (2,6): 1→0 | confermato |
 | Oscillazione pala destra ON | (2,6): 0→2 | blade_oscillation destra=2 |
 | Oscillazione entrambe le pale ON | (2,6): 2→3 | blade_oscillation entrambe=3 |
+| Oscillazione sfalsata ON | (2,12): 0→1 | staggered_oscillation=1 |
+| Oscillazione sfalsata OFF | (2,12): 1→0 | confermato |
+| Oscillazione sincronizzata ON | (2,11): 0→1 | sync_oscillation=1 |
+| Oscillazione sincronizzata OFF | (2,11): 1→0 | confermato |
+| Entrambe pale indipendenti | (2,11)=0, (2,12)=0, (2,6)=3 | default quando nessun pattern attivo |
 | `piid=1=2` con device ON | — | 80001 — read-only anche da ON (definitivo) |
-| siid=11–20 piid=1–5 (50 probes) | — | tutto 80001 — siid non esistono su questo firmware |
+| siid=11–20 piid=1–5 (50 probes, device standby) | — | tutto 80001 — siid non esistono |
 
 ## Next discovery targets
 
-- `(2,2)`: sempre 0, non ancora identificata.
-- `(2,8)`: sempre 0, non ancora identificata.
-- `(2,10)`: sempre 1, non ancora identificata.
-- `(6,7)`: sempre 1. Provare buzzer/beep toggle o display on/off dall'app.
-- Oscillazione verticale (angolo testa): potrebbe essere `(2,7)` o un'altra property.
+- `(2,2)`, `(2,8)`: sempre 0 — da testare con funzioni non ancora mappate.
+- `(2,7)`: sempre 0 in tutti i test oscillazione — da testare con altre feature.
+- `(2,10)`: sempre 1 — da testare.
+- `(6,7)`: sempre 1 — provare buzzer/beep toggle o display on/off dall'app.

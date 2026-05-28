@@ -40,11 +40,11 @@ MF10_PROPERTY_CANDIDATES: dict[str, list[dict[str, int]]] = {
     # Unconfirmed — oscillation and other controls
     "unknown_2_2": [{"siid": 2, "piid": 2}],
     "oscillation_candidates": [
-        {"siid": 2, "piid": 6},
         {"siid": 2, "piid": 7},
         {"siid": 2, "piid": 8},
-        {"siid": 2, "piid": 9},
         {"siid": 2, "piid": 10},
+        {"siid": 2, "piid": 11},
+        {"siid": 2, "piid": 12},
     ],
     "siid6_candidates": [
         {"siid": 6, "piid": 1},
@@ -64,13 +64,20 @@ MF10_PROPERTY_MAP: dict[str, dict] = {
     "mode": {"siid": 2, "piid": 3},               # 0=AI auto, 1=Potente, 2=Sonno, 3=Manuale, 7=Naturale
     "fan_speed": {"siid": 2, "piid": 4},          # int 1–10
     "child_lock": {"siid": 2, "piid": 5},         # 0=OFF, 1=ON
-    "blade_oscillation": {"siid": 2, "piid": 6},  # 0=none, 1=left, 2=right, 3=both
-    "oscillation": {"siid": 2, "piid": 7},        # 0=OFF, 1=ON (master swing toggle)
-    "temperature": {"siid": 3, "piid": 2},        # °C, read-only sensor
+    "blade_oscillation": {"siid": 2, "piid": 6},   # 0=none, 1=left, 2=right, 3=both
+    "oscillation": {"siid": 2, "piid": 7},         # 0=OFF, 1=ON (master swing toggle)
+    "sync_oscillation": {"siid": 2, "piid": 11},        # 0=off, 1=on (blades move in sync)
+    "staggered_oscillation": {"siid": 2, "piid": 12},  # 0=off, 1=on (blades out of phase)
+    "continuous_monitoring": {"siid": 2, "piid": 10},  # 0=off, 1=on (TempSync feature)
+    "key_tone": {"siid": 6, "piid": 7},                # 0=off, 1=on (tono tasti / beep)
+    "display": {"siid": 6, "piid": 11},               # 0=off, 1=on (display LED)
+    "off_timer": {"siid": 2, "piid": 8},              # 0=disattivato, int=ore (timer spegnimento)
+    "temperature": {"siid": 3, "piid": 2},              # °C, read-only sensor
 }
 
 # Properties discovered but NOT yet identified:
 #   (2, 2) — always 0 across all modes and states
+#   (2, 7) — always 0 across all oscillation tests; purpose unknown
 #   (2, 8) — always 0
 #   (2, 10) — always 1
 #   (6, 4) — always 0
