@@ -143,3 +143,19 @@ Note di design:
 
 HA sandbox (Docker) avviata e ricaricata dopo ogni modifica strutturale.
 Nessun errore di setup; tutte le platform caricate correttamente.
+
+### Chiusura definitiva enumerazione property (serata 2)
+
+Scan dettagliato A1 (range non esplorati: siid=2 piid 21–40, siid=3 piid 4–15,
+siid=4 piid 9–20, siid=6 piid 13–25, siid=21–30 piid 1–3 — totale 87 probe)
+ripetuto sia ON che OFF con dump completo della risposta del relay per ogni
+probe.
+
+Risultato: **nessuna property reale nuova**. Tutte le risposte `code=0` sono
+alias del relay verso `(2,1)`, `(2,4)`, `(4,1)`, `(4,2)` con i loro valori
+correnti (riconoscibili perché `resp_piid` ≠ `req_piid`). Le risposte di
+errore sono timeout di rete random (variano tra i due scan).
+
+Conclusione: la superficie MiOT del MF10 è davvero quella delle 19 property
+note. Il power non è raggiungibile via `get/set_properties`. Piano dettagliato
+delle prossime piste in [plans/power-on-off-investigation.md](../plans/power-on-off-investigation.md).

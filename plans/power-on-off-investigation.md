@@ -313,5 +313,21 @@ Prima di ogni test ad alto rischio (E*, H3):
 |------|------|-------|------|
 | 2026-05-28 | A1 parziale (siid 2 piid 21-40, siid 3 piid 4-15, siid 4 piid 9-20, siid 6 piid 13-25, siid 21-30 piid 1-3) | **nessuna property nuova** (0/87 — 55 alias, 32 80001) | `tmp/full-scan-off.json` |
 | 2026-05-28 | Diff property note ON vs OFF (19 prop) | solo `(2,1)` `(2,8)` `(3,2)` cambiano — niente di nuovo | `tmp/full-on.json`, `tmp/full-off.json` |
+| 2026-05-28 | A1 dettagliato (stessi 87 probe ON e OFF) — diff completo response per response | **nessuna property reale**. Tutte le differenze ON/OFF sono alias del relay verso `(2,1)`/`(2,4)`/`(4,1)`/`(4,2)` con i loro valori correnti, oppure timeout di rete aleatori | `tmp/full-scan-on-detailed.json`, `tmp/full-scan-off-detailed.json` |
+
+### Conclusione provvisoria (2026-05-28)
+
+Esauriti tutti i probe non distruttivi su siid 1–30 / piid 1–40. La superficie MiOT
+esposta dal firmware MF10 è limitata alle 19 property note. Il comando di power
+**non è raggiungibile via `get/set_properties` di MiOT standard**.
+
+Strade ancora aperte (in ordine di valore atteso):
+
+1. **F1/F3** — payload alternativi (MIIO legacy `method=set_power`, endpoint relay diversi)
+2. **G1** — enumerazione endpoint REST nel codice di riferimento `CodyJon/dreame-ap10-integration`
+3. **H1** — Proxyman passivo sull'iPhone per identificare hostname/path usato dall'app
+4. **I1** — provare ad aggiungere il device a Mi Home (Xiaomi) invece di Dreamehome
+5. **C1** — `mode` con valori non documentati 4/5/6/8+ (basso rischio)
+6. **E1+** — action MiOT con aiid > 3 (ALTO rischio: WiFi reset = re-pairing)
 
 (aggiornare riga per riga man mano)
