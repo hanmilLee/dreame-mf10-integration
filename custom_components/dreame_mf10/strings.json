@@ -30,11 +30,15 @@
     }
   },
   "entity": {
+    "binary_sensor": {
+      "power_state": { "name": "Power state" }
+    },
     "switch": {
       "child_lock": { "name": "Child lock" },
       "continuous_monitoring": { "name": "Continuous monitoring" },
       "key_tone": { "name": "Key tone" },
-      "display": { "name": "Display LED" }
+      "display": { "name": "Display LED" },
+      "device_rotation": { "name": "Device rotation" }
     },
     "select": {
       "oscillation": {
@@ -47,10 +51,21 @@
           "both_sync": "Both (synchronized)",
           "both_staggered": "Both (staggered)"
         }
+      },
+      "mode": {
+        "name": "Mode",
+        "state": {
+          "ai": "AI auto",
+          "powerful": "Powerful",
+          "night": "Sleep",
+          "manual": "Manual",
+          "natural": "Natural"
+        }
       }
     },
     "number": {
-      "off_timer": { "name": "Off timer" }
+      "off_timer": { "name": "Off timer" },
+      "fan_speed": { "name": "Speed" }
     }
   }
 }

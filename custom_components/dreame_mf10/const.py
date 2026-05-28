@@ -22,7 +22,7 @@ MAX_POLLING_INTERVAL = 300
 MF10_SPEED_MIN = 1
 MF10_SPEED_MAX = 10
 
-PLATFORMS: list[str] = ["sensor", "fan", "switch", "select", "number"]
+PLATFORMS: list[str] = ["sensor", "binary_sensor", "switch", "select", "number"]
 
 MF10_POWER_ON = 1
 MF10_POWER_OFF = 2
