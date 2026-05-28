@@ -20,10 +20,8 @@ from homeassistant.util.percentage import (
 from .const import (
     DOMAIN,
     MODEL_MF10,
-    MF10_MODE_AI,
     MF10_MODE_NAME_TO_VALUE,
     MF10_MODE_OPTIONS,
-    MF10_POWER_OFF,
     MF10_POWER_ON,
     MF10_PROPERTY_MAP,
     MF10_SPEED_MAX,
@@ -55,12 +53,13 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
     _attr_has_entity_name = True
     _attr_name = None
     _attr_speed_count = MF10_SPEED_MAX
+    # NOTA: TURN_ON / TURN_OFF non sono supportati perché il power state
+    # (siid=2, piid=1) è read-only via cloud relay — 80001 su qualsiasi write.
+    # L'entità resta utile per leggere is_on e controllare speed/mode/oscillate.
     _attr_supported_features = (
         FanEntityFeature.SET_SPEED
         | FanEntityFeature.PRESET_MODE
         | FanEntityFeature.OSCILLATE
-        | FanEntityFeature.TURN_ON
-        | FanEntityFeature.TURN_OFF
     )
     _attr_preset_modes = _PRESET_MODES
 
@@ -114,36 +113,15 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
             return None
         return bool(rot)
 
-    async def async_turn_on(
-        self,
-        percentage: int | None = None,
-        preset_mode: str | None = None,
-        **kwargs: Any,
-    ) -> None:
-        props = [_prop("power", MF10_POWER_ON)]
-        if percentage is not None:
-            speed = math.ceil(percentage_to_ranged_value(_SPEED_RANGE, percentage))
-            props.append(_prop("fan_speed", speed))
-        if preset_mode is not None:
-            mode_val = MF10_MODE_NAME_TO_VALUE.get(preset_mode)
-            if mode_val is None:
-                raise HomeAssistantError(f"Unknown preset mode: {preset_mode}")
-            props.append(_prop("mode", mode_val))
-        else:
-            props.append(_prop("mode", MF10_MODE_AI))
-        await self.coordinator.async_set_properties(props)
-        await self.coordinator.async_request_refresh()
-
-    async def async_turn_off(self, **kwargs: Any) -> None:
-        await self.coordinator.async_set_properties([_prop("power", MF10_POWER_OFF)])
-        await self.coordinator.async_request_refresh()
-
     async def async_set_percentage(self, percentage: int) -> None:
+        # percentage=0 non spegne (power è read-only): impostare velocità minima.
         if percentage == 0:
-            await self.async_turn_off()
-            return
-        speed = math.ceil(percentage_to_ranged_value(_SPEED_RANGE, percentage))
-        await self.coordinator.async_set_properties([_prop("fan_speed", speed)])
+            await self.coordinator.async_set_properties(
+                [_prop("fan_speed", MF10_SPEED_MIN)]
+            )
+        else:
+            speed = math.ceil(percentage_to_ranged_value(_SPEED_RANGE, percentage))
+            await self.coordinator.async_set_properties([_prop("fan_speed", speed)])
         await self.coordinator.async_request_refresh()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
