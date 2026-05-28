@@ -107,3 +107,39 @@ Da approfondire: se (2,7)=0 e si scrive (2,6)=3, le pale partono?
 1. Implementare entità HA per le nuove property (switch, select, number)
 2. Indagare (4,1) e (4,2) — probabile angolo oscillazione
 3. Chiarire (2,2) e (2,7) — ancora sconosciute
+
+## Aggiornamento serale — implementazione entità HA + chiusura unidentified
+
+### Unidentified rivisitate (con device acceso)
+
+- `(2,7)` = **device_rotation** (rotazione del ventilatore su se stesso, distinta dall'oscillazione pale)
+- `(2,2)` e `(6,4)`: confermate read-only (80001 in scrittura)
+- `(4,1)`: read-only, costante a 100
+- `(4,2)`: write con `value=90` bypassa `(2,4)` e imposta motore in scala raw
+  (display ha mostrato "speed 13"). Marcata come **pericolosa**, non usata nell'integrazione.
+
+### Refactor architettura entità HA
+
+Inizialmente implementata una `MF10FanEntity` composita (speed + preset + oscillate). Rimossa
+perché on/off è read-only e il FanEntity HA implica turn_on/turn_off, confondente.
+
+Scomposta in primitive granulari:
+
+- `sensor`: temperature (già esistente)
+- `binary_sensor`: power_state (sola lettura)
+- `switch`: child_lock, continuous_monitoring, key_tone, display, device_rotation
+- `select`: oscillation (6 stati coerenti che compongono `(2,6)+(2,11)+(2,12)`), mode
+- `number`: off_timer, fan_speed
+
+Note di design:
+
+- `oscillation` è una select unica perché `sync_oscillation` e `staggered_oscillation`
+  hanno senso solo con `blade_oscillation=both` — esponendole separate generava stati
+  incoerenti. I 6 stati mappano 1-a-1 ai tre piid sottostanti.
+- Nessuna `fan` entity: `FanEntity` HA implica turn_on/turn_off non supportabili.
+- `power_state` come `binary_sensor` espone lo stato letto senza promettere controllo.
+
+### Verifica smoke nella sandbox
+
+HA sandbox (Docker) avviata e ricaricata dopo ogni modifica strutturale.
+Nessun errore di setup; tutte le platform caricate correttamente.
