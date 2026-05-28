@@ -109,10 +109,10 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
 
     @property
     def oscillating(self) -> bool | None:
-        osc = self.coordinator.data.get("oscillation")
-        if osc is None:
+        rot = self.coordinator.data.get("device_rotation")
+        if rot is None:
             return None
-        return bool(osc)
+        return bool(rot)
 
     async def async_turn_on(
         self,
@@ -155,6 +155,6 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
 
     async def async_oscillate(self, oscillating: bool) -> None:
         await self.coordinator.async_set_properties(
-            [_prop("oscillation", 1 if oscillating else 0)]
+            [_prop("device_rotation", 1 if oscillating else 0)]
         )
         await self.coordinator.async_request_refresh()
