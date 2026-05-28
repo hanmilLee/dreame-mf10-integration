@@ -17,8 +17,21 @@ Firmware: 1035 / Plugin 104
 ```
 
 ## Stato attuale
-**Pre-codice**: nessun `custom_components/` ancora scritto. La property map MiOT del modello **non è nota**.
-La fase più rischiosa è la discovery delle proprietà (`siid`/`piid`/`aiid`), non l'integrazione HA in sé.
+**Fase 1 / Milestone 3 completata** — integrazione funzionante con le seguenti limitazioni.
+
+Cosa funziona:
+
+- Config flow, autenticazione cloud, polling 30s
+- Fan entity: velocità (10 livelli), preset mode (ai/powerful/sleep/manual/natural), oscillazione
+- Sensor: temperatura °C
+
+Blocco aperto — **on/off**:
+
+- `siid=2, piid=1` = power state (1=on, 2=standby) — **read-only**, non scrivibile
+- Action `siid=2, aiid=1/2/3` **causano WiFi reset** sul MF10 — NON eseguire mai
+- Il device in standby è connesso WiFi e risponde a tutti i comandi tranne power-on
+- Candidato da testare: `siid=11, piid=5` (bool, write-only) da modelli Dreame fan simili su miot-spec.org
+- Log di sessione: `sessions/2026-05-28-on-off-investigation.md`
 
 ## Fasi (incrementali, da rispettare nell'ordine)
 1. **Fase 1** — Integrazione minima: login cloud → discovery → fan entity → on/off + speed 1–10. Property map provvisoria + logging.
