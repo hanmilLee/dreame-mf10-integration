@@ -115,8 +115,8 @@ probed and rejected by the backend (device doesn't expose them):
 | siid | piid | valore osservato | ipotesi |
 |------|------|-----------------|---------|
 | 2 | 2 | sempre 0 | sconosciuta — invariante in tutti i test |
-| 4 | 1 | sempre 100 | probabile angolo/range oscillazione orizzontale |
-| 4 | 2 | sempre 180 | probabile angolo/range oscillazione verticale (gradi) |
+| 4 | 1 | sempre 100 | configurazione hardware read-only — scopo sconosciuto |
+| 4 | 2 | sempre 180 | **PERICOLOSA** — write con value=90 bypasssa (2,4) e imposta motore in scala raw (ha mostrato "speed 13"). Non usare nell'integrazione. |
 | 6 | 4 | sempre 0 | sconosciuta |
 
 ## Non rilevabile via get_properties
