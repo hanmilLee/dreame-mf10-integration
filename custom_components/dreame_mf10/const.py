@@ -60,17 +60,17 @@ MF10_PROPERTY_CANDIDATES: dict[str, list[dict[str, int]]] = {
 # 2026-05-22 on device dreame.fan.u2519 (did=-115387050, region=eu).
 # These are the canonical (siid, piid) for production polling and entity state.
 MF10_PROPERTY_MAP: dict[str, dict] = {
-    "power": {"siid": 2, "piid": 1},         # 1=ON, 2=OFF
-    "mode": {"siid": 2, "piid": 3},           # 0=AI auto, 1=Potente, 2=Sonno, 3=Manuale, 7=Naturale
-    "fan_speed": {"siid": 2, "piid": 4},      # int 1–10
-    "child_lock": {"siid": 2, "piid": 5},     # 0=OFF, 1=ON
-    "oscillation": {"siid": 2, "piid": 7},    # 0=OFF, 1=ON
-    "temperature": {"siid": 3, "piid": 2},    # °C, read-only sensor
+    "power": {"siid": 2, "piid": 1},              # 1=ON, 2=OFF — read-only
+    "mode": {"siid": 2, "piid": 3},               # 0=AI auto, 1=Potente, 2=Sonno, 3=Manuale, 7=Naturale
+    "fan_speed": {"siid": 2, "piid": 4},          # int 1–10
+    "child_lock": {"siid": 2, "piid": 5},         # 0=OFF, 1=ON
+    "blade_oscillation": {"siid": 2, "piid": 6},  # 0=none, 1=left, 2=right, 3=both
+    "oscillation": {"siid": 2, "piid": 7},        # 0=OFF, 1=ON (master swing toggle)
+    "temperature": {"siid": 3, "piid": 2},        # °C, read-only sensor
 }
 
 # Properties discovered but NOT yet identified:
 #   (2, 2) — always 0 across all modes and states
-#   (2, 6) — always 3 regardless of oscillation on/off; hypothesis: oscillation angle enum
 #   (2, 8) — always 0
 #   (2, 10) — always 1
 #   (6, 4) — always 0
@@ -78,6 +78,12 @@ MF10_PROPERTY_MAP: dict[str, dict] = {
 # System read-only (not polled):
 #   (6, 1) — timezone string e.g. "Europe/Rome"
 #   (6, 2) — empty string (device name?)
+
+# Blade oscillation enum values (for MF10_PROPERTY_MAP["blade_oscillation"])
+MF10_BLADE_OSC_NONE = 0
+MF10_BLADE_OSC_LEFT = 1
+MF10_BLADE_OSC_RIGHT = 2
+MF10_BLADE_OSC_BOTH = 3
 
 # Fan mode enum values (for MF10_PROPERTY_MAP["mode"])
 MF10_MODE_AI = 0

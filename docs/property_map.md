@@ -14,7 +14,8 @@ Firmware: 1035 / Plugin 104
 | mode | 2 | 3 | int | see mode table below |
 | fan_speed | 2 | 4 | int | 1–10 (min–max) |
 | child_lock | 2 | 5 | int | 0 = OFF, 1 = ON |
-| oscillation | 2 | 7 | int | 0 = OFF, 1 = ON |
+| blade_oscillation | 2 | 6 | int | 0 = nessuna, 1 = sinistra, 2 = destra, 3 = entrambe |
+| oscillation | 2 | 7 | int | 0 = OFF, 1 = ON (master toggle) |
 | temperature | 3 | 2 | int | °C, read-only ambient sensor |
 
 ### Mode values (siid=2, piid=3)
@@ -64,10 +65,12 @@ Snapshot già disponibili in `research/snapshots/`:
 | `after-power-on` → `after-power-off` | `(2,1): 1→2`, `(2,4): 8→6` |
 | `after-power-off` → `after-mode-sleep` | `(2,1): 2→1`, `(2,3): 0→2`, `(2,4): 6→1` |
 
-Il terzo diff è il più utile per HA: dall'app, un cambio modalità effettuato
-mentre il device era off ha acceso il device (`power 2→1`). Serve verificare se
-lo stesso `set_properties(mode=2)` da HA produce solo beep o aggiorna davvero
-`power` a `1`.
+Il terzo diff era fuorviante: testato via API (`set_properties(mode=2)` da standby)
+il device riceve il comando (beep) ma `power` rimane 2. Il cambio `power 2→1` in quel
+diff era causato da un'interazione fisica dell'utente, non dal comando API.
+
+**Confermato 2026-05-28**: `piid=1` è read-only sia da standby che da ON.
+`set_properties(piid=1, value=2)` con device fisicamente ON → code=80001.
 
 ## Action map — siid=2 (DISTRUTTIVE — non eseguire mai)
 
@@ -106,6 +109,8 @@ probed and rejected by the backend (device doesn't expose them):
 | siid | piid | observed value | hypothesis |
 |------|------|----------------|-----------|
 | 2 | 2 | always 0 | unknown — did not change across any test |
+| 2 | 8 | always 0 | unknown |
+| 2 | 10 | always 1 | unknown |
 | 6 | 7 | always 1 | NOT child_lock (confirmed) — possibly buzzer or display |
 
 ## Discovery methodology
@@ -116,7 +121,7 @@ probed and rejected by the backend (device doesn't expose them):
 4. `python tools/diff_properties.py research/snapshots/<before>.json research/snapshots/<after>.json`
 5. Repeat for each function.
 
-Tests performed this session:
+Tests performed this session (2026-05-22):
 
 | Test | property changed | finding |
 |------|-----------------|---------|
@@ -131,10 +136,21 @@ Tests performed this session:
 
 Temperature (3,2) changed naturally across tests (ambient drift) — confirmed read-only sensor.
 
+Tests performed this session (2026-05-28):
+
+| Test | property changed | finding |
+|------|-----------------|---------|
+| Oscillazione pala sinistra ON | (2,6): 0→1 | blade_oscillation sinistra=1 |
+| Oscillazione pala sinistra OFF | (2,6): 1→0 | confermato |
+| Oscillazione pala destra ON | (2,6): 0→2 | blade_oscillation destra=2 |
+| Oscillazione entrambe le pale ON | (2,6): 2→3 | blade_oscillation entrambe=3 |
+| `piid=1=2` con device ON | — | 80001 — read-only anche da ON (definitivo) |
+| siid=11–20 piid=1–5 (50 probes) | — | tutto 80001 — siid non esistono su questo firmware |
+
 ## Next discovery targets
 
-- `(2,2)`: probe with oscillation toggle (if device has swing feature) or
-  natural wind speed variation. Currently always 0.
-- `(6,7)`: always 1. Try buzzer/beep toggle or display on/off from app
-  settings if available.
-- Additional siid/piid outside candidate range: deferred to Phase 2.
+- `(2,2)`: sempre 0, non ancora identificata.
+- `(2,8)`: sempre 0, non ancora identificata.
+- `(2,10)`: sempre 1, non ancora identificata.
+- `(6,7)`: sempre 1. Provare buzzer/beep toggle o display on/off dall'app.
+- Oscillazione verticale (angolo testa): potrebbe essere `(2,7)` o un'altra property.
