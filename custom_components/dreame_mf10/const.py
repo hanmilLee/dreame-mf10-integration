@@ -65,7 +65,7 @@ MF10_PROPERTY_MAP: dict[str, dict] = {
     "fan_speed": {"siid": 2, "piid": 4},          # int 1–10
     "child_lock": {"siid": 2, "piid": 5},         # 0=OFF, 1=ON
     "blade_oscillation": {"siid": 2, "piid": 6},   # 0=none, 1=left, 2=right, 3=both
-    "oscillation": {"siid": 2, "piid": 7},         # 0=OFF, 1=ON (master swing toggle)
+    "device_rotation": {"siid": 2, "piid": 7},     # 0=off, 1=on (rotazione del dispositivo su se stesso)
     "sync_oscillation": {"siid": 2, "piid": 11},        # 0=off, 1=on (blades move in sync)
     "staggered_oscillation": {"siid": 2, "piid": 12},  # 0=off, 1=on (blades out of phase)
     "continuous_monitoring": {"siid": 2, "piid": 10},  # 0=off, 1=on (TempSync feature)

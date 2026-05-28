@@ -15,7 +15,7 @@ Firmware: 1035 / Plugin 104
 | fan_speed | 2 | 4 | int | 1–10 (min–max) |
 | child_lock | 2 | 5 | int | 0 = OFF, 1 = ON |
 | blade_oscillation | 2 | 6 | int | 0 = nessuna, 1 = sinistra, 2 = destra, 3 = entrambe |
-| oscillation | 2 | 7 | int | sempre 0 in tutti i test — scopo non ancora identificato |
+| device_rotation | 2 | 7 | int | 0 = off, 1 = on (rotazione del dispositivo su se stesso) |
 | sync_oscillation | 2 | 11 | int | 0 = off, 1 = on (pale si muovono in sincrono) |
 | staggered_oscillation | 2 | 12 | int | 0 = off, 1 = on (pale sfasate) — si esclude con sync |
 | continuous_monitoring | 2 | 10 | int | 0 = off, 1 = on (TempSync / monitoraggio continuo) |
@@ -115,7 +115,6 @@ probed and rejected by the backend (device doesn't expose them):
 | siid | piid | valore osservato | ipotesi |
 |------|------|-----------------|---------|
 | 2 | 2 | sempre 0 | sconosciuta — invariante in tutti i test |
-| 2 | 7 | sempre 0 | sconosciuta — invariante in tutti i test oscillazione |
 | 4 | 1 | sempre 100 | probabile angolo/range oscillazione orizzontale |
 | 4 | 2 | sempre 180 | probabile angolo/range oscillazione verticale (gradi) |
 | 6 | 4 | sempre 0 | sconosciuta |
