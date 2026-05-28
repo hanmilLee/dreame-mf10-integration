@@ -28,5 +28,35 @@
       "already_configured": "Questo dispositivo è già configurato.",
       "no_supported_devices": "Nessun Dreame MF10 (dreame.fan.u2519) trovato su questo account."
     }
+  },
+  "entity": {
+    "switch": {
+      "child_lock": { "name": "Blocco bambini" },
+      "continuous_monitoring": { "name": "Monitoraggio continuo" },
+      "key_tone": { "name": "Tono tasti" },
+      "display": { "name": "Display LED" }
+    },
+    "select": {
+      "blade_oscillation": {
+        "name": "Oscillazione pale",
+        "state": {
+          "none": "Nessuna",
+          "left": "Sinistra",
+          "right": "Destra",
+          "both": "Entrambe"
+        }
+      },
+      "oscillation_pattern": {
+        "name": "Pattern oscillazione",
+        "state": {
+          "independent": "Indipendente",
+          "synchronized": "Sincronizzata",
+          "staggered": "Sfalsata"
+        }
+      }
+    },
+    "number": {
+      "off_timer": { "name": "Timer spegnimento" }
+    }
   }
 }

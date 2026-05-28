@@ -22,7 +22,7 @@ MAX_POLLING_INTERVAL = 300
 MF10_SPEED_MIN = 1
 MF10_SPEED_MAX = 10
 
-PLATFORMS: list[str] = ["sensor", "fan"]
+PLATFORMS: list[str] = ["sensor", "fan", "switch", "select", "number"]
 
 MF10_POWER_ON = 1
 MF10_POWER_OFF = 2
@@ -107,3 +107,29 @@ MF10_MODE_OPTIONS: dict[int, str] = {
     MF10_MODE_NATURAL: "natural",
 }
 MF10_MODE_NAME_TO_VALUE: dict[str, int] = {v: k for k, v in MF10_MODE_OPTIONS.items()}
+
+# Blade oscillation values (for select entity)
+MF10_BLADE_OSC_OPTIONS: dict[int, str] = {
+    MF10_BLADE_OSC_NONE: "none",
+    MF10_BLADE_OSC_LEFT: "left",
+    MF10_BLADE_OSC_RIGHT: "right",
+    MF10_BLADE_OSC_BOTH: "both",
+}
+MF10_BLADE_OSC_NAME_TO_VALUE: dict[str, int] = {
+    v: k for k, v in MF10_BLADE_OSC_OPTIONS.items()
+}
+
+# Oscillation pattern values (composed of sync_oscillation + staggered_oscillation,
+# which are mutually exclusive on the device).
+MF10_OSC_PATTERN_INDEPENDENT = "independent"   # sync=0, staggered=0
+MF10_OSC_PATTERN_SYNCHRONIZED = "synchronized"  # sync=1, staggered=0
+MF10_OSC_PATTERN_STAGGERED = "staggered"        # sync=0, staggered=1
+MF10_OSC_PATTERNS: list[str] = [
+    MF10_OSC_PATTERN_INDEPENDENT,
+    MF10_OSC_PATTERN_SYNCHRONIZED,
+    MF10_OSC_PATTERN_STAGGERED,
+]
+
+# Off timer range (hours). Range chosen conservatively pending app-side max validation.
+MF10_OFF_TIMER_MIN = 0
+MF10_OFF_TIMER_MAX = 12
