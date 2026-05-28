@@ -50,6 +50,25 @@ In modalità Manuale il display mostra la velocità (1–10), non un codice F.
 per qualsiasi valore). On/off non è controllabile da HA. Usare il tasto fisico o
 l'app Dreamehome.
 
+Importante: questo non significa che il device sia irraggiungibile via cloud
+quando è spento. I comandi `mode`, `fan_speed` e `oscillation` inviati da HA
+arrivano comunque al device anche con `power=2` (beep fisico confermato).
+Il problema è specifico del comando di accensione/spegnimento reale: il device
+riceve property operative, ma non le interpreta come transizione `OFF → ON`.
+
+Snapshot già disponibili in `research/snapshots/`:
+
+| Diff | Cambi osservati |
+|------|-----------------|
+| `initial-candidates` → `after-power-on` | `(2,1): 2→1`, `(2,4): 6→8` |
+| `after-power-on` → `after-power-off` | `(2,1): 1→2`, `(2,4): 8→6` |
+| `after-power-off` → `after-mode-sleep` | `(2,1): 2→1`, `(2,3): 0→2`, `(2,4): 6→1` |
+
+Il terzo diff è il più utile per HA: dall'app, un cambio modalità effettuato
+mentre il device era off ha acceso il device (`power 2→1`). Serve verificare se
+lo stesso `set_properties(mode=2)` da HA produce solo beep o aggiorna davvero
+`power` a `1`.
+
 ## Action map — siid=2 (tutte pericolose)
 
 Tutte le action testate su siid=2 causano reset WiFi del device (re-pairing richiesto).
