@@ -69,20 +69,25 @@ mentre il device era off ha acceso il device (`power 2→1`). Serve verificare s
 lo stesso `set_properties(mode=2)` da HA produce solo beep o aggiorna davvero
 `power` a `1`.
 
-## Action map — siid=2 (tutte pericolose)
+## Action map — siid=2 (DISTRUTTIVE — non eseguire mai)
 
-Tutte le action testate su siid=2 causano reset WiFi del device (re-pairing richiesto).
-**Non eseguire action su questo siid senza estrema cautela.**
+Tutte le action su siid=2 causano reset WiFi del device (re-pairing richiesto),
+**indipendentemente dallo stato del device** (acceso, spento, in qualsiasi modalità).
+Il chip WiFi è sempre alimentato e connesso — il reset avviene a livello firmware.
 
 | aiid | code risposta | Effetto osservato |
 |------|--------------|-------------------|
 | 1 | 0 | Reset WiFi — confermato 2026-05-23 |
 | 2 | 0 | Reset WiFi — confermato 2026-05-23 |
-| 3 | 80001 (timeout) | Reset WiFi — confermato 2026-05-23 |
+| 3 | 80001¹ | Reset WiFi — confermato 2026-05-23 e 2026-05-26 (device fisicamente spento) |
+
+¹ Il codice 80001 su aiid=3 non indica "device irraggiungibile": la relay restituisce
+80001 perché il device si disconnette durante l'esecuzione dell'action stessa.
 
 Note: AP10 usa `siid=2, aiid=3` come power toggle. Su MF10 questa action NON è power toggle.
-Il controllo on/off è inaccessibile sia via property (80001) che via action (reset WiFi).
-Night mode è una modalità operativa del ventilatore, non un sostituto dello spegnimento.
+Il turn-on non è implementabile via `set_properties` (firmware ignora `power=1`) né via
+`call_action` su siid=2 (reset WiFi). L'unica strada non ancora esplorata è la cattura
+del traffico app (WebSocket/MQTT) durante l'accensione manuale.
 
 ## Invalid candidates (envelope 80001)
 

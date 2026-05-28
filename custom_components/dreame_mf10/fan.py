@@ -22,8 +22,9 @@ from .const import (
     MODEL_MF10,
     MF10_MODE_AI,
     MF10_MODE_NAME_TO_VALUE,
-    MF10_MODE_NIGHT,
     MF10_MODE_OPTIONS,
+    MF10_POWER_OFF,
+    MF10_POWER_ON,
     MF10_PROPERTY_MAP,
     MF10_SPEED_MAX,
     MF10_SPEED_MIN,
@@ -83,12 +84,10 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
 
     @property
     def is_on(self) -> bool | None:
-        if self.coordinator.data.get("power") is None:
+        power = self.coordinator.data.get("power")
+        if power is None:
             return None
-        mode = self.coordinator.data.get("mode")
-        if mode is None:
-            return None
-        return mode != MF10_MODE_NIGHT
+        return power == MF10_POWER_ON
 
     @property
     def percentage(self) -> int | None:
@@ -121,7 +120,7 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
         preset_mode: str | None = None,
         **kwargs: Any,
     ) -> None:
-        props = []
+        props = [_prop("power", MF10_POWER_ON)]
         if percentage is not None:
             speed = math.ceil(percentage_to_ranged_value(_SPEED_RANGE, percentage))
             props.append(_prop("fan_speed", speed))
@@ -136,10 +135,7 @@ class MF10FanEntity(CoordinatorEntity[MF10Coordinator], FanEntity):
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        # power property is not writable via cloud relay (code=80001).
-        # Night mode is the effective off: fan runs at minimum, device stays
-        # connected and can be woken remotely.
-        await self.coordinator.async_set_properties([_prop("mode", MF10_MODE_NIGHT)])
+        await self.coordinator.async_set_properties([_prop("power", MF10_POWER_OFF)])
         await self.coordinator.async_request_refresh()
 
     async def async_set_percentage(self, percentage: int) -> None:
