@@ -12,12 +12,18 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
-    MF10_BLADE_OSC_NAME_TO_VALUE,
-    MF10_BLADE_OSC_OPTIONS,
-    MF10_OSC_PATTERN_INDEPENDENT,
-    MF10_OSC_PATTERN_STAGGERED,
-    MF10_OSC_PATTERN_SYNCHRONIZED,
-    MF10_OSC_PATTERNS,
+    MF10_BLADE_OSC_BOTH,
+    MF10_BLADE_OSC_LEFT,
+    MF10_BLADE_OSC_NONE,
+    MF10_BLADE_OSC_RIGHT,
+    MF10_OSC_BOTH_INDEPENDENT,
+    MF10_OSC_BOTH_STAGGERED,
+    MF10_OSC_BOTH_SYNCHRONIZED,
+    MF10_OSC_LEFT,
+    MF10_OSC_OFF,
+    MF10_OSC_OPTIONS,
+    MF10_OSC_RIGHT,
+    MF10_OSC_TO_PROPS,
     MF10_PROPERTY_MAP,
     MODEL_MF10,
 )
@@ -30,21 +36,26 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     coordinator: MF10Coordinator = hass.data[DOMAIN][entry.entry_id]
-    mac = entry.data.get("mac")
-    async_add_entities(
-        [
-            MF10BladeOscillationSelect(coordinator, mac),
-            MF10OscillationPatternSelect(coordinator, mac),
-        ]
-    )
+    async_add_entities([MF10OscillationSelect(coordinator, entry.data.get("mac"))])
 
 
-class _MF10SelectBase(CoordinatorEntity[MF10Coordinator], SelectEntity):
+class MF10OscillationSelect(CoordinatorEntity[MF10Coordinator], SelectEntity):
+    """Unified oscillation control.
+
+    Composes blade_oscillation (2,6) with sync (2,11) and staggered (2,12).
+    sync/staggered are only valid with both blades active, so this entity
+    enforces coherent state transitions on writes.
+    """
+
     _attr_has_entity_name = True
+    _attr_translation_key = "oscillation"
+    _attr_icon = "mdi:rotate-3d-variant"
+    _attr_options = MF10_OSC_OPTIONS
 
     def __init__(self, coordinator: MF10Coordinator, mac: str | None) -> None:
         super().__init__(coordinator)
         self._mac = mac
+        self._attr_unique_id = f"{coordinator.did}_oscillation"
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -59,72 +70,37 @@ class _MF10SelectBase(CoordinatorEntity[MF10Coordinator], SelectEntity):
             manufacturer="Dreame",
         )
 
-
-class MF10BladeOscillationSelect(_MF10SelectBase):
-    """Blade oscillation: none / left / right / both (siid=2, piid=6)."""
-
-    _attr_translation_key = "blade_oscillation"
-    _attr_icon = "mdi:rotate-3d-variant"
-    _attr_options = list(MF10_BLADE_OSC_OPTIONS.values())
-
-    def __init__(self, coordinator: MF10Coordinator, mac: str | None) -> None:
-        super().__init__(coordinator, mac)
-        self._attr_unique_id = f"{coordinator.did}_blade_oscillation"
-
     @property
     def current_option(self) -> str | None:
-        val = self.coordinator.data.get("blade_oscillation")
-        if val is None:
+        blade = self.coordinator.data.get("blade_oscillation")
+        if blade is None:
             return None
-        return MF10_BLADE_OSC_OPTIONS.get(val)
+        if blade == MF10_BLADE_OSC_NONE:
+            return MF10_OSC_OFF
+        if blade == MF10_BLADE_OSC_LEFT:
+            return MF10_OSC_LEFT
+        if blade == MF10_BLADE_OSC_RIGHT:
+            return MF10_OSC_RIGHT
+        if blade == MF10_BLADE_OSC_BOTH:
+            sync = self.coordinator.data.get("sync_oscillation") or 0
+            staggered = self.coordinator.data.get("staggered_oscillation") or 0
+            if sync:
+                return MF10_OSC_BOTH_SYNCHRONIZED
+            if staggered:
+                return MF10_OSC_BOTH_STAGGERED
+            return MF10_OSC_BOTH_INDEPENDENT
+        return None
 
     async def async_select_option(self, option: str) -> None:
-        value = MF10_BLADE_OSC_NAME_TO_VALUE.get(option)
-        if value is None:
-            raise HomeAssistantError(f"Unknown blade oscillation: {option}")
-        p = MF10_PROPERTY_MAP["blade_oscillation"]
-        await self.coordinator.async_set_properties(
-            [{"siid": p["siid"], "piid": p["piid"], "value": value}]
-        )
-        await self.coordinator.async_request_refresh()
-
-
-class MF10OscillationPatternSelect(_MF10SelectBase):
-    """Oscillation pattern composed of sync_oscillation (2,11) + staggered_oscillation (2,12).
-
-    The two underlying flags are mutually exclusive on the device. This select
-    exposes them as a single tri-state to prevent inconsistent combinations.
-    """
-
-    _attr_translation_key = "oscillation_pattern"
-    _attr_icon = "mdi:sine-wave"
-    _attr_options = MF10_OSC_PATTERNS
-
-    def __init__(self, coordinator: MF10Coordinator, mac: str | None) -> None:
-        super().__init__(coordinator, mac)
-        self._attr_unique_id = f"{coordinator.did}_oscillation_pattern"
-
-    @property
-    def current_option(self) -> str | None:
-        sync = self.coordinator.data.get("sync_oscillation")
-        staggered = self.coordinator.data.get("staggered_oscillation")
-        if sync is None or staggered is None:
-            return None
-        if sync:
-            return MF10_OSC_PATTERN_SYNCHRONIZED
-        if staggered:
-            return MF10_OSC_PATTERN_STAGGERED
-        return MF10_OSC_PATTERN_INDEPENDENT
-
-    async def async_select_option(self, option: str) -> None:
-        if option not in MF10_OSC_PATTERNS:
-            raise HomeAssistantError(f"Unknown oscillation pattern: {option}")
-        sync = 1 if option == MF10_OSC_PATTERN_SYNCHRONIZED else 0
-        staggered = 1 if option == MF10_OSC_PATTERN_STAGGERED else 0
+        if option not in MF10_OSC_TO_PROPS:
+            raise HomeAssistantError(f"Unknown oscillation option: {option}")
+        blade, sync, staggered = MF10_OSC_TO_PROPS[option]
+        bp = MF10_PROPERTY_MAP["blade_oscillation"]
         sp = MF10_PROPERTY_MAP["sync_oscillation"]
         stp = MF10_PROPERTY_MAP["staggered_oscillation"]
         await self.coordinator.async_set_properties(
             [
+                {"siid": bp["siid"], "piid": bp["piid"], "value": blade},
                 {"siid": sp["siid"], "piid": sp["piid"], "value": sync},
                 {"siid": stp["siid"], "piid": stp["piid"], "value": staggered},
             ]

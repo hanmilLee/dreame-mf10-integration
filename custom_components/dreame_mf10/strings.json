@@ -37,21 +37,15 @@
       "display": { "name": "Display LED" }
     },
     "select": {
-      "blade_oscillation": {
-        "name": "Blade oscillation",
+      "oscillation": {
+        "name": "Oscillation",
         "state": {
-          "none": "None",
+          "off": "Off",
           "left": "Left",
           "right": "Right",
-          "both": "Both"
-        }
-      },
-      "oscillation_pattern": {
-        "name": "Oscillation pattern",
-        "state": {
-          "independent": "Independent",
-          "synchronized": "Synchronized",
-          "staggered": "Staggered"
+          "both": "Both (independent)",
+          "both_sync": "Both (synchronized)",
+          "both_staggered": "Both (staggered)"
         }
       }
     },

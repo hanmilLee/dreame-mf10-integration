@@ -108,27 +108,33 @@ MF10_MODE_OPTIONS: dict[int, str] = {
 }
 MF10_MODE_NAME_TO_VALUE: dict[str, int] = {v: k for k, v in MF10_MODE_OPTIONS.items()}
 
-# Blade oscillation values (for select entity)
-MF10_BLADE_OSC_OPTIONS: dict[int, str] = {
-    MF10_BLADE_OSC_NONE: "none",
-    MF10_BLADE_OSC_LEFT: "left",
-    MF10_BLADE_OSC_RIGHT: "right",
-    MF10_BLADE_OSC_BOTH: "both",
-}
-MF10_BLADE_OSC_NAME_TO_VALUE: dict[str, int] = {
-    v: k for k, v in MF10_BLADE_OSC_OPTIONS.items()
-}
-
-# Oscillation pattern values (composed of sync_oscillation + staggered_oscillation,
-# which are mutually exclusive on the device).
-MF10_OSC_PATTERN_INDEPENDENT = "independent"   # sync=0, staggered=0
-MF10_OSC_PATTERN_SYNCHRONIZED = "synchronized"  # sync=1, staggered=0
-MF10_OSC_PATTERN_STAGGERED = "staggered"        # sync=0, staggered=1
-MF10_OSC_PATTERNS: list[str] = [
-    MF10_OSC_PATTERN_INDEPENDENT,
-    MF10_OSC_PATTERN_SYNCHRONIZED,
-    MF10_OSC_PATTERN_STAGGERED,
+# Unified oscillation select — composes blade_oscillation (2,6) +
+# sync_oscillation (2,11) + staggered_oscillation (2,12) into a single
+# coherent state. sync/staggered are only meaningful with both blades active.
+MF10_OSC_OFF = "off"                       # blade=0
+MF10_OSC_LEFT = "left"                     # blade=1, sync=0, staggered=0
+MF10_OSC_RIGHT = "right"                   # blade=2, sync=0, staggered=0
+MF10_OSC_BOTH_INDEPENDENT = "both"          # blade=3, sync=0, staggered=0
+MF10_OSC_BOTH_SYNCHRONIZED = "both_sync"    # blade=3, sync=1, staggered=0
+MF10_OSC_BOTH_STAGGERED = "both_staggered"  # blade=3, sync=0, staggered=1
+MF10_OSC_OPTIONS: list[str] = [
+    MF10_OSC_OFF,
+    MF10_OSC_LEFT,
+    MF10_OSC_RIGHT,
+    MF10_OSC_BOTH_INDEPENDENT,
+    MF10_OSC_BOTH_SYNCHRONIZED,
+    MF10_OSC_BOTH_STAGGERED,
 ]
+
+# (blade, sync, staggered) tuple for each option, used to write to the device.
+MF10_OSC_TO_PROPS: dict[str, tuple[int, int, int]] = {
+    MF10_OSC_OFF: (MF10_BLADE_OSC_NONE, 0, 0),
+    MF10_OSC_LEFT: (MF10_BLADE_OSC_LEFT, 0, 0),
+    MF10_OSC_RIGHT: (MF10_BLADE_OSC_RIGHT, 0, 0),
+    MF10_OSC_BOTH_INDEPENDENT: (MF10_BLADE_OSC_BOTH, 0, 0),
+    MF10_OSC_BOTH_SYNCHRONIZED: (MF10_BLADE_OSC_BOTH, 1, 0),
+    MF10_OSC_BOTH_STAGGERED: (MF10_BLADE_OSC_BOTH, 0, 1),
+}
 
 # Off timer range (hours). Range chosen conservatively pending app-side max validation.
 MF10_OFF_TIMER_MIN = 0

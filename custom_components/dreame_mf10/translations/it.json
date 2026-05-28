@@ -37,21 +37,15 @@
       "display": { "name": "Display LED" }
     },
     "select": {
-      "blade_oscillation": {
-        "name": "Oscillazione pale",
+      "oscillation": {
+        "name": "Oscillazione",
         "state": {
-          "none": "Nessuna",
+          "off": "Spenta",
           "left": "Sinistra",
           "right": "Destra",
-          "both": "Entrambe"
-        }
-      },
-      "oscillation_pattern": {
-        "name": "Pattern oscillazione",
-        "state": {
-          "independent": "Indipendente",
-          "synchronized": "Sincronizzata",
-          "staggered": "Sfalsata"
+          "both": "Entrambe (indipendente)",
+          "both_sync": "Entrambe (sincronizzata)",
+          "both_staggered": "Entrambe (sfalsata)"
         }
       }
     },
