@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest a control, entity, or improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: feature
+    attributes:
+      label: What would you like?
+      description: Describe the control or behavior you'd like to see.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: |
+        Is it something the Dreamehome app can do? If you know the MiOT property
+        (siid/piid) or have captured the command, include it here.
+    validations:
+      required: false

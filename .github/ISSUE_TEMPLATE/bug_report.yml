@@ -1,0 +1,46 @@
+name: Bug report
+description: Report a problem with the Dreame MF10 integration
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much as you can.
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+      placeholder: "2025.x.x"
+    validations:
+      required: true
+  - type: input
+    id: integration_version
+    attributes:
+      label: Integration version
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: input
+    id: region
+    attributes:
+      label: Dreame cloud region
+      placeholder: "eu / cn / us / sg / ru"
+    validations:
+      required: true
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: |
+        Enable debug logging for `custom_components.dreame_mf10` and paste the relevant lines.
+        ⚠️ Remove any credentials, tokens, DID and MAC before pasting.
+      render: text
+    validations:
+      required: false
