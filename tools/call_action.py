@@ -20,13 +20,14 @@ Optional:         DREAME_REGION (default: eu)
 WARNING: actions e scritture di property possono cambiare lo stato del device fisico.
 Usare solo per test espliciti.
 
-AZIONI PERICOLOSE CONFERMATE (dreame.fan.u2519):
-    siid=2, aiid=1 → reset WiFi del device (re-pairing richiesto) — confermato 2026-05-23
-    siid=2, aiid=2 → reset WiFi del device (re-pairing richiesto) — confermato 2026-05-23
-    siid=2, aiid=3 → reset WiFi del device (re-pairing richiesto) — confermato 2026-05-28
-                     (NOTA: sul PM10/dreame.airp.* questa è il toggle power — NON sul MF10/fan)
-    NON eseguire nessuna delle action siid=2 aiid=1/2/3 su questo modello.
-    POWER STATE: siid=2, piid=1 — leggibile (1=on, 2=standby). Scrittura da testare con device ON.
+POWER (dreame.fan.u2519) — TROVATO 2026-05-29 via cattura MITM dell'app:
+    POWER ON:  siid=2 aiid=1 in=[{"piid":1,"value":1}]
+    POWER OFF: siid=2 aiid=1 in=[{"piid":1,"value":0}]
+    Esempio: python tools/call_action.py --siid 2 --aiid 1 --params '[{"piid":1,"value":1}]'
+
+⚠️ FOOTGUN: action siid=2 aiid=1/2/3 con params VUOTI ([]) = RESET WiFi del device
+   (re-pairing fisico richiesto). Il power funziona SOLO con l'argomento in=[{piid:1,value}].
+   Questo script RIFIUTA aiid=1/2/3 senza --params per evitare il reset accidentale.
 """
 
 from __future__ import annotations
@@ -112,7 +113,15 @@ async def main() -> None:
 
     # Conferma interattiva per action generiche (non --toggle-power che ha la propria)
     if not args.set_prop and not args.read_prop and not args.toggle_power and not args.raw_method:
-        print(f"\n⚠️  ATTENZIONE: stai per eseguire l'action siid={args.siid} aiid={args.aiid}")
+        # GUARDIA FOOTGUN: aiid=1/2/3 con params vuoti = RESET WiFi del device.
+        # Il power richiede in=[{piid:1,value:0|1}]. Rifiuta l'invio senza argomento.
+        if args.siid == 2 and args.aiid in (1, 2, 3) and args.params.strip() in ("[]", ""):
+            print(f"\n🛑 BLOCCATO: action siid=2 aiid={args.aiid} con params vuoti = RESET WiFi del device.")
+            print("   Per il POWER usa l'argomento di input, es:")
+            print("     --params '[{\"piid\":1,\"value\":1}]'   # ON")
+            print("     --params '[{\"piid\":1,\"value\":0}]'   # OFF")
+            sys.exit(1)
+        print(f"\n⚠️  ATTENZIONE: stai per eseguire l'action siid={args.siid} aiid={args.aiid} params={args.params}")
         print("   Le action possono cambiare lo stato fisico del device.")
         confirm = input("   Digita 'esegui' per confermare: ").strip()
         if confirm != "esegui":
