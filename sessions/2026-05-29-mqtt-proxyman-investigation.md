@@ -84,9 +84,62 @@ Testato `set_properties(2,1,value=1)` con `from` = uid / did / "" su device in s
 - `tools/mqtt_listen.py`: subscriber MQTT al broker Dreame — **connessione VERIFICATA OK**
   (clientId/uid/token, no cert, rejectUnauthorized off). Iscrizione a `/status/...` o `#`.
 
-## Prossimi passi
-1. **Test interattivo MQTT**: `python3 tools/mqtt_listen.py --wildcard`, poi toggle power
-   dall'app → osservare se arriva `properties_changed` su (2,1) e se QUALCHE comando passa da MQTT.
+## Test MQTT interattivo — ESEGUITO (14:32)
+
+`mqtt_listen.py --wildcard` con toggle ON/OFF dall'app:
+
+- `#` → **NEGATO (ACL)**: il broker concede solo i topic del proprio account.
+- `/status/{did}/{uid}/{model}/eu/` → **OK qos=0**.
+- Toggle ON dall'app → ricevuto `properties_changed` con `(2,1)=1` + dump completo.
+- Toggle OFF dall'app → ricevuto `properties_changed` con `(2,1)=2` + dump completo.
+
+Conclusioni:
+- **Il device notifica on/off via MQTT `/status/` in tempo reale** → utilizzabile per push
+  state nell'integrazione (al posto del polling 30s).
+- Questo è il device che NOTIFICA (device→cloud→noi), NON il comando dell'app (app→device).
+  Il topic su cui l'app pubblica i comandi non è sottoscrivibile (ACL nega `#`).
+- **Nuova property: `(6,30)=1`** — non era nelle 19 note. Da identificare.
+- Dump completo on power-change include anche `(6,4)=0` (già nota read-only).
+
+## Test sottoscrizione topic comando — ESEGUITO (14:38)
+
+`mqtt_listen.py --cmd-topics`: sottoscrizione a `/status/` + candidati `/w/ /msg/ /p/ /r/ /c/
+/iot/ /down/ /set/` (suffisso `{did}/{uid}/{model}/eu/`).
+
+- `/status/` → **OK**. Tutti gli altri → **NEGATO (ACL)**.
+- Toggle ON/OFF da app → di nuovo solo `properties_changed` su `/status/` (2,1: 1→2).
+
+Conclusione: i topic comando sono **publish-only** per le nostre credenziali (ACL nega la
+sottoscrizione ma probabilmente consente la pubblicazione). L'app ci scrive i comandi; noi
+possiamo solo leggere `/status/`. → Esperimento publish ora giustificato (advisor esito 3).
+
+## Esperimento publish MQTT — ESEGUITO (14:41)
+
+`mqtt_publish.py --safe-test`: pubblicato `set_properties(6,11)` (toggle display, innocuo) su
+8 topic candidati `/w/ /msg/ /p/ /r/ /c/ /iot/ /down/ /set/` (suffisso `{did}/{uid}/{model}/eu/`),
+con `/status/` sottoscritto per verifica.
+
+- Tutti i publish "confermati" localmente (QoS0), ma **nessuna eco** su `/status/` → device non reagisce.
+- Verifica QoS1 su `/w/`: **PUBACK ricevuto** → il broker ACCETTA il nostro publish su `/w/`
+  (nessuna disconnessione ACL). Ma il device non agisce.
+
+Interpretazione: `/w/{did}/{uid}/{model}/eu/` è accettato dal broker ma **non è il topic di
+comando del device**. Il device non è user-scoped: ascolta probabilmente un topic basato su
+`did`/`model` senza `uid`, che non possiamo indovinare con certezza né leggere (ACL) né
+sniffare (proxy HTTP non vede MQTT). Combinato con decompilato + ioBroker (comandi = REST),
+l'ipotesi più probabile resta: **i comandi vanno via REST**, non MQTT.
+
+## Prossimi passi (2 strade)
+
+1. **Cattura REST pulita** (raccomandata dall'advisor, mai fatta bene): killare COMPLETAMENTE
+   l'app → abilitare SSL proxying per `eu.iot.dreame.tech` **E** `cn-airp.dreame.tech` PRIMA di
+   riaprire → toggle power. Il "nessun sendCommand visto" finora non è affidabile perché la
+   connessione all'host comando poteva essere già aperta (non decifrata dal primo byte).
+   Focus su `cn-airp.dreame.tech`/`/airpdev/` (pagina di controllo, mai esplorata).
+
+2. **Cattura trasparente mitmproxy** (conclusiva ma più setup): Mac come hotspot + mitmproxy
+   `--mode transparent --tcp-hosts 'mt\.eu\.iot\.dreame\.tech'` → cattura TUTTO incluso MQTT
+   porta 19973. Risolve definitivamente REST-vs-MQTT e rivela il comando esatto.
 2. **Cattura REST corretta**: killare l'app, abilitare SSL proxying su `eu.iot.dreame.tech`
    PRIMA di aprire l'app (così la connessione è decifrata dall'inizio), poi toggle power →
    il `sendCommand` dovrebbe comparire (sconfigge l'ipotesi connessione persistente).

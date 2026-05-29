@@ -79,6 +79,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Subscriber MQTT broker Dreame")
     parser.add_argument("--wildcard", action="store_true",
                         help="Iscriviti a `#` (tutto) invece del solo /status/ del device")
+    parser.add_argument("--cmd-topics", action="store_true",
+                        help="Iscriviti ai topic candidati comando (/w/ /msg/ /p/ /r/ /c/) oltre a /status/")
     args = parser.parse_args()
 
     uid, token, did, model, bind, region = asyncio.run(_bootstrap())
@@ -88,9 +90,9 @@ def main() -> None:
     print(f"Device:   {model}  did={did}")
     print(f"uid:      {uid}")
 
-    status_topic = f"/status/{did}/{uid}/{model}/{region}/"
-    sub_topic = "#" if args.wildcard else status_topic
-    print(f"Subscribe: {sub_topic}\n")
+    suffix = f"{did}/{uid}/{model}/{region}/"
+    status_topic = f"/status/{suffix}"
+    print(f"Status topic: {status_topic}\n")
 
     # clientId deterministico ma unico (no Math.random nel sandbox; qui ok)
     client_id = "p_" + os.urandom(8).hex()
@@ -103,14 +105,37 @@ def main() -> None:
     ctx.verify_mode = ssl.CERT_NONE  # rejectUnauthorized: false
     client.tls_set_context(ctx)
 
+    # Topic da sottoscrivere, con un mid per riconoscere l'esito di ciascuno
+    if args.wildcard:
+        # `#` + il topic specifico, nel caso il broker rifiuti il wildcard via ACL
+        topics = ["#", status_topic]
+    elif args.cmd_topics:
+        # /status/ confermato + candidati comando (app→device). L'app fa da oracolo:
+        # se il comando passa qui, vediamo topic + payload + metodo.
+        topics = [status_topic]
+        topics += [f"/{p}/{suffix}" for p in ("w", "msg", "p", "r", "c", "iot", "down", "set")]
+    else:
+        topics = [status_topic]
+    mid_to_topic = {}
+
     def on_connect(c, userdata, flags, rc):
         if rc == 0:
-            print(f"[{time.strftime('%H:%M:%S')}] CONNESSO al broker")
-            c.subscribe(sub_topic)
-            print(f"[{time.strftime('%H:%M:%S')}] Iscritto a {sub_topic}")
-            print("\n>>> Ora premi ON/OFF dall'app Dreamehome e osserva qui <<<\n")
+            print(f"[{time.strftime('%H:%M:%S')}] CONNESSO al broker", flush=True)
+            for t in topics:
+                res, mid = c.subscribe(t)
+                mid_to_topic[mid] = t
+                print(f"[{time.strftime('%H:%M:%S')}] subscribe richiesto: {t} (mid={mid})", flush=True)
+            print("\n>>> Ora premi ON/OFF dall'app Dreamehome e osserva qui <<<\n", flush=True)
         else:
-            print(f"CONNECT fallito rc={rc} ({mqtt.connack_string(rc)})")
+            print(f"CONNECT fallito rc={rc} ({mqtt.connack_string(rc)})", flush=True)
+
+    def on_subscribe(c, userdata, mid, granted_qos):
+        t = mid_to_topic.get(mid, "?")
+        # QoS 0x80 (128) = subscription NEGATA dal broker (ACL)
+        qos = list(granted_qos)
+        denied = any(q >= 128 for q in qos)
+        status = "NEGATO (ACL)" if denied else f"OK qos={qos}"
+        print(f"[{time.strftime('%H:%M:%S')}] SUBACK {t}: {status}", flush=True)
 
     def on_message(c, userdata, msg):
         ts = time.strftime("%H:%M:%S")
@@ -118,13 +143,14 @@ def main() -> None:
             payload = msg.payload.decode("utf-8", "replace")
         except Exception:
             payload = repr(msg.payload)
-        print(f"[{ts}] TOPIC: {msg.topic}")
-        print(f"         {payload}\n")
+        print(f"[{ts}] TOPIC: {msg.topic}", flush=True)
+        print(f"         {payload}\n", flush=True)
 
     def on_disconnect(c, userdata, rc):
-        print(f"[{time.strftime('%H:%M:%S')}] DISCONNESSO rc={rc}")
+        print(f"[{time.strftime('%H:%M:%S')}] DISCONNESSO rc={rc}", flush=True)
 
     client.on_connect = on_connect
+    client.on_subscribe = on_subscribe
     client.on_message = on_message
     client.on_disconnect = on_disconnect
 
@@ -134,10 +160,17 @@ def main() -> None:
         print(f"ERRORE connessione: {ex}")
         sys.exit(1)
 
+    client.loop_start()
+    print(f"[{time.strftime('%H:%M:%S')}] in ascolto... (heartbeat ogni 15s, Ctrl+C per uscire)", flush=True)
     try:
-        client.loop_forever()
+        n = 0
+        while True:
+            time.sleep(15)
+            n += 1
+            print(f"[{time.strftime('%H:%M:%S')}] ...vivo, nessun messaggio finora (tick {n})", flush=True)
     except KeyboardInterrupt:
         print("\nUscita.")
+        client.loop_stop()
         client.disconnect()
 
 
