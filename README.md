@@ -1,10 +1,10 @@
 # Dreame MF10 — Home Assistant Custom Integration
 
-> **Status: Phase 3 complete — full property map validated, all controls exposed as primitives.**
-> Every control surface available in the Dreamehome app is exposed as a Home Assistant entity
-> (switch / select / number / sensor), except for **on/off**, which is read-only on this model
-> via the Dreame cloud API. Use the physical button or the Dreamehome app to power the device
-> on/off; everything else (speed, mode, oscillation, timer, display, beep, etc.) works from HA.
+> **Status: Phase 3 complete + on/off solved (2026-05-29).**
+> Full control from Home Assistant including **power on/off** via a proper `fan` entity
+> (on/off, speed, preset modes), plus switches/select/number/sensor for the rest. On/off is
+> performed via the MiOT action the Dreamehome app uses (`siid=2 aiid=1`, input `piid=1` value 1/0),
+> discovered by capturing the app's traffic and validated on the real device.
 
 Custom Home Assistant integration for the **Dreame Bladeless Fan MF10** (`dreame.fan.u2519`).
 Cloud-first via the Dreamehome API. No local API is assumed.
@@ -29,43 +29,43 @@ is designed to support more via a model-capability map later.
 
 | Entity                                       | Domain          | Description                                                     |
 |----------------------------------------------|-----------------|-----------------------------------------------------------------|
+| `fan.dreame_mf10`                            | `fan`           | Main control: on/off, speed (%), preset modes (AI/Powerful/Sleep/Manual/Natural) |
 | `sensor.dreame_mf10_temperature`             | `sensor`        | Ambient temperature (°C, read-only)                             |
-| `binary_sensor.dreame_mf10_power_state`      | `binary_sensor` | Power state (read-only — on/off not controllable via API)       |
 | `switch.dreame_mf10_child_lock`              | `switch`        | Child lock                                                      |
 | `switch.dreame_mf10_continuous_monitoring`   | `switch`        | TempSync / continuous temperature monitoring                    |
 | `switch.dreame_mf10_key_tone`                | `switch`        | Button beep                                                     |
 | `switch.dreame_mf10_display_led`             | `switch`        | LED display always-on (briefly flashes on command anyway)       |
 | `switch.dreame_mf10_device_rotation`         | `switch`        | Base rotation (the whole fan rotating on itself)                |
 | `select.dreame_mf10_oscillation`             | `select`        | Blade oscillation: off / left / right / both (independent/sync/staggered) |
-| `select.dreame_mf10_mode`                    | `select`        | Mode: AI / Powerful / Sleep / Manual / Natural                  |
-| `number.dreame_mf10_speed`                   | `number`        | Fan speed (1–10)                                                |
 | `number.dreame_mf10_off_timer`               | `number`        | Auto-off timer (hours, 0 = disabled)                            |
 
-## On/off status (definitively confirmed)
+Fan speed is only honored by the device in **Manual** mode, so setting a speed (the fan
+percentage slider) automatically switches the device to Manual.
 
-On/off control is **not possible via the Dreame cloud API** on the MF10. After extensive
-testing the conclusion is final:
+## On/off (solved 2026-05-29)
 
-- `siid=2, piid=1` is the **power state indicator** (1 = on, 2 = standby). It is
-  **read-only** — writing it returns error 80001 in any device state (standby or on).
-- Actions `siid=2, aiid=1/2/3` all cause a **WiFi reset** on this device model,
-  requiring physical re-pairing. Do not call them. (Note: `aiid=3` is the toggle-power
-  action on the Dreame PM10 air purifier — it maps to something completely different
-  on the MF10 fan.)
-- Probing `siid=11–20` (50 properties): all return 80001 — no hidden on/off endpoint.
-- When in **standby**, the device stays on WiFi and accepts every other command
-  (speed, mode, oscillation, etc.). Only on/off is unreachable from the cloud relay.
-- The Dreamehome app likely uses **MQTT directly** for on/off, bypassing the REST relay
-  this integration uses. Replicating that is out of scope for now.
+Power on/off **works from Home Assistant**, via the same MiOT action the Dreamehome app uses:
 
-Use the **physical button** or the **Dreamehome app** to power the device on/off.
-All other controls work fine from HA, whether the device is on or in standby.
+- **Power on**: `action siid=2, aiid=1, in=[{piid:1, value:1}]`
+- **Power off**: `action siid=2, aiid=1, in=[{piid:1, value:0}]`
+
+`siid=2, piid=1` is only the read-only **state indicator** (1 = on, 2 = standby). The on/off
+command is the action above — discovered by capturing the app's traffic with a transparent MITM
+(the app talks to the cloud over an IP-based endpoint, which is why earlier hostname-based
+captures missed it).
+
+> ⚠️ The same action `aiid=1` with an **empty** input (`in=[]`) triggers a **WiFi reset** on the
+> device (physical re-pairing required). The power command works only with the explicit
+> `in=[{piid:1,value}]` argument. The integration hardcodes this input, so the reset payload is
+> unreachable from HA.
 
 ## What does NOT work yet
 
-- **Turn on / turn off** — power is read-only via cloud (see On/off status above).
 - **Oscillation speed** (standard / fast) — not exposed via `get_properties`; likely sent
   as a contextual parameter with the oscillation command. Not yet replicated.
+- **Real-time state via MQTT** — state still comes from 30 s polling + immediate post-command
+  refresh. The device does push `properties_changed` over MQTT (`/status/...`); switching the
+  coordinator to MQTT push is a planned follow-up (needs access-token refresh + reconnect handling).
 - `async_step_reauth` — if credentials expire while HA is running, the entry is
   marked REAUTH\_REQUIRED but no re-authentication UI is shown. Workaround: remove
   and re-add the integration.

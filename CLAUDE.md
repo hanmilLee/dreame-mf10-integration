@@ -25,24 +25,26 @@ con app Dreamehome. Vedi [docs/property_map.md](docs/property_map.md) e
 
 Cosa funziona (entità HA esposte):
 
+- **fan**: entità principale — **on/off**, velocità (percentuale 1–10), preset mode
+  (AI/Potente/Sonno/Manuale/Naturale). Velocità applicata forzando mode=manual (il device
+  onora `fan_speed` solo in manuale). Stato ottimistico fino a conferma del poll.
 - **sensor**: temperatura ambientale (°C)
-- **binary_sensor**: stato accensione (read-only)
 - **switch**: blocco bambini, monitoraggio continuo, tono tasti, display LED, rotazione device
-- **select**: oscillazione pale (6 stati coerenti: off/left/right/both[independent|sync|staggered]),
-  modalità (AI/Potente/Sonno/Manuale/Naturale)
-- **number**: velocità ventola (1–10), timer spegnimento (0–12 ore)
+- **select**: oscillazione pale (6 stati coerenti: off/left/right/both[independent|sync|staggered])
+- **number**: timer spegnimento (0–12 ore)
 - Config flow, autenticazione cloud, polling 30s, refresh immediato post-comando
 
-Blocco definitivamente confermato — **on/off non controllabile via API cloud**:
+**ON/OFF RISOLTO (2026-05-29)** — power controllabile via action MiOT:
 
-- `siid=2, piid=1` = power state (1=on, 2=standby) — **read-only** in entrambi gli stati
-  (confermato via test `set_properties` con device fisicamente ON: 80001)
-- Action `siid=2, aiid=1/2/3` **causano WiFi reset** sul MF10 — NON eseguire mai
-- siid=11–20 piid=1–5: nessun siid aggiuntivo esiste su questo firmware (50 probes, tutti 80001)
-- Il device in standby resta connesso WiFi e risponde a tutti i comandi tranne power-on
-- L'app Dreamehome usa probabilmente MQTT diretto per on/off (non passa dal relay REST)
-- Conseguenza nell'integrazione: nessuna entità per turn_on/turn_off. binary_sensor `power_state`
-  espone solo lo stato letto. Accensione/spegnimento via tasto fisico o app Dreamehome.
+- **POWER ON**: `action siid=2, aiid=1, in=[{piid:1, value:1}]`
+- **POWER OFF**: `action siid=2, aiid=1, in=[{piid:1, value:0}]`
+- Scoperto via cattura MITM (mitmproxy WireGuard) dell'app, validato sul device reale e in HA.
+- `siid=2, piid=1` resta read-only: è solo l'**indicatore** di stato (1=on, 2=standby), letto dal coordinator.
+- ⚠️ **L'action aiid=1 con params VUOTI `[]` resetta il WiFi**. Il power funziona SOLO con
+  l'argomento `in=[{piid:1,value}]`. `coordinator.async_set_power` hardcoda i params → reset
+  irraggiungibile dall'integrazione. `tools/call_action.py` ha una guardia anti-reset.
+- La conclusione precedente "on/off impossibile / MQTT" era ERRATA (l'app usa REST su endpoint
+  IP-based, mancato dalle catture per-hostname). Vedi [sessions/2026-05-29-mqtt-proxyman-investigation.md].
 
 Property non rilevabili / pericolose:
 
@@ -62,7 +64,7 @@ Property non rilevabili / pericolose:
 custom_components/dreame_mf10/
   __init__.py  manifest.json  const.py
   config_flow.py  coordinator.py  dreame_cloud.py
-  sensor.py  binary_sensor.py  switch.py  select.py  number.py
+  fan.py  sensor.py  switch.py  select.py  number.py
   strings.json  translations/{en,it}.json
 tools/
   scan_properties.py   # CLI standalone per snapshot proprietà
@@ -71,9 +73,9 @@ tools/
 ```
 Dominio: `DOMAIN = "dreame_mf10"`. Modello: `MODEL_MF10 = "dreame.fan.u2519"`.
 
-Niente `fan.py`: il `FanEntity` di HA implicava un toggle on/off non supportabile via API.
-Tutte le primitive sono esposte granularmente (switch/select/number/binary_sensor) — più
-trasparenti rispetto allo stato reale del device.
+`fan.py` espone la `FanEntity` (on/off + velocità + preset). Il vecchio vincolo "niente fan.py
+perché on/off non supportabile" è **obsoleto** dal 2026-05-29: il comando power (action 2/1) è
+noto e validato. Le altre primitive (switch/select/number) restano granulari per il controllo fine.
 
 ## Regole non negoziabili
 - **Niente blocking dell'event loop HA**: tutto async o via executor. Usare `DataUpdateCoordinator`.
@@ -82,8 +84,9 @@ trasparenti rispetto allo stato reale del device.
 - **Non esporre come stabili funzioni non verificate**: dietro flag `experimental_entities` (default off).
 - **Polling**: default 30s, mai sotto 10s. Refresh immediato dopo ogni comando.
 - **Action MiOT mai chiamate alla cieca all'avvio**: solo via `tools/call_action.py` esplicito. Le action possono muovere pale/spegnere/resettare.
-- **Off behavior**: power è read-only definitivamente — nessun off API. L'integrazione non
-  espone turn_on/turn_off; binary_sensor `power_state` mostra solo lo stato letto.
+- **Power = action 2/1 con input obbligatorio**: on/off via `action siid=2 aiid=1 in=[{piid:1,value:1|0}]`.
+  ⚠️ La stessa action con `in` VUOTO resetta il WiFi. Usare sempre `coordinator.async_set_power`
+  (params hardcoded) — mai costruire l'action power a mano.
 - **Backward compat**: prevedere `MODEL_CAPABILITIES` dict — non scrivere codice che impedisca di aggiungere altri modelli Dreame fan in futuro.
 
 ## Scope: cosa NON fare in fase 1

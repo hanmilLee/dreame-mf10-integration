@@ -10,7 +10,7 @@ Firmware: 1035 / Plugin 104
 
 | Property | siid | piid | Type | Values |
 |----------|------|------|------|--------|
-| power | 2 | 1 | int | 1 = ON, 2 = OFF — **read-only via cloud relay** (set_properties → code=80001) |
+| power | 2 | 1 | int | 1 = ON, 2 = OFF — indicatore **read-only** (set_properties → 80001). On/off via action 2/1 (vedi sotto) |
 | mode | 2 | 3 | int | see mode table below |
 | fan_speed | 2 | 4 | int | 1–10 (min–max) |
 | child_lock | 2 | 5 | int | 0 = OFF, 1 = ON |
@@ -78,25 +78,26 @@ diff era causato da un'interazione fisica dell'utente, non dal comando API.
 **Confermato 2026-05-28**: `piid=1` è read-only sia da standby che da ON.
 `set_properties(piid=1, value=2)` con device fisicamente ON → code=80001.
 
-## Action map — siid=2 (DISTRUTTIVE — non eseguire mai)
+## Action map — siid=2
 
-Tutte le action su siid=2 causano reset WiFi del device (re-pairing richiesto),
-**indipendentemente dallo stato del device** (acceso, spento, in qualsiasi modalità).
-Il chip WiFi è sempre alimentato e connesso — il reset avviene a livello firmware.
+**POWER (RISOLTO 2026-05-29)** — on/off via action con argomento di input:
 
-| aiid | code risposta | Effetto osservato |
-|------|--------------|-------------------|
-| 1 | 0 | Reset WiFi — confermato 2026-05-23 |
-| 2 | 0 | Reset WiFi — confermato 2026-05-23 |
-| 3 | 80001¹ | Reset WiFi — confermato 2026-05-23 e 2026-05-26 (device fisicamente spento) |
+| aiid | params (`in`) | Effetto |
+|------|---------------|---------|
+| 1 | `[{piid:1, value:1}]` | **POWER ON** — validato sul device reale e in HA |
+| 1 | `[{piid:1, value:0}]` | **POWER OFF** — validato |
+| 1 | `[]` (vuoti) | ⚠️ **Reset WiFi** — confermato 2026-05-23 |
+| 2 | `[]` (vuoti) | ⚠️ Reset WiFi — confermato 2026-05-23 |
+| 3 | `[]` (vuoti) | ⚠️ Reset WiFi — confermato 2026-05-23/26 (80001¹ ma esegue) |
 
-¹ Il codice 80001 su aiid=3 non indica "device irraggiungibile": la relay restituisce
-80001 perché il device si disconnette durante l'esecuzione dell'action stessa.
+¹ Il codice 80001 su aiid=3 con params vuoti non indica "device irraggiungibile": la relay
+restituisce 80001 perché il device si disconnette durante l'esecuzione del reset.
 
-Note: AP10 usa `siid=2, aiid=3` come power toggle. Su MF10 questa action NON è power toggle.
-Il turn-on non è implementabile via `set_properties` (firmware ignora `power=1`) né via
-`call_action` su siid=2 (reset WiFi). L'unica strada non ancora esplorata è la cattura
-del traffico app (WebSocket/MQTT) durante l'accensione manuale.
+**Chiave**: l'action `aiid=1` con l'argomento `in=[{piid:1,value}]` è il power on/off legittimo
+(quello che usa l'app). Con `in` VUOTO la stessa action resetta il WiFi. Scoperto via cattura
+MITM dell'app (l'app usa REST `sendCommand` su endpoint IP-based). `coordinator.async_set_power`
+hardcoda l'argomento → il payload-reset è irraggiungibile dall'integrazione.
+Nota: AP10 usa `siid=2, aiid=3` come power toggle; su MF10 il power è invece aiid=1 con input.
 
 ## Invalid candidates (envelope 80001)
 
