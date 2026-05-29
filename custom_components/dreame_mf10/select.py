@@ -16,8 +16,6 @@ from .const import (
     MF10_BLADE_OSC_LEFT,
     MF10_BLADE_OSC_NONE,
     MF10_BLADE_OSC_RIGHT,
-    MF10_MODE_NAME_TO_VALUE,
-    MF10_MODE_OPTIONS,
     MF10_OSC_BOTH_INDEPENDENT,
     MF10_OSC_BOTH_STAGGERED,
     MF10_OSC_BOTH_SYNCHRONIZED,
@@ -39,12 +37,7 @@ async def async_setup_entry(
 ) -> None:
     coordinator: MF10Coordinator = hass.data[DOMAIN][entry.entry_id]
     mac = entry.data.get("mac")
-    async_add_entities(
-        [
-            MF10OscillationSelect(coordinator, mac),
-            MF10ModeSelect(coordinator, mac),
-        ]
-    )
+    async_add_entities([MF10OscillationSelect(coordinator, mac)])
 
 
 class MF10OscillationSelect(CoordinatorEntity[MF10Coordinator], SelectEntity):
@@ -112,49 +105,5 @@ class MF10OscillationSelect(CoordinatorEntity[MF10Coordinator], SelectEntity):
                 {"siid": sp["siid"], "piid": sp["piid"], "value": sync},
                 {"siid": stp["siid"], "piid": stp["piid"], "value": staggered},
             ]
-        )
-        await self.coordinator.async_request_refresh()
-
-
-class MF10ModeSelect(CoordinatorEntity[MF10Coordinator], SelectEntity):
-    """Fan mode (siid=2, piid=3): AI/Powerful/Sleep/Manual/Natural."""
-
-    _attr_has_entity_name = True
-    _attr_translation_key = "mode"
-    _attr_icon = "mdi:fan-auto"
-    _attr_options = list(MF10_MODE_OPTIONS.values())
-
-    def __init__(self, coordinator: MF10Coordinator, mac: str | None) -> None:
-        super().__init__(coordinator)
-        self._mac = mac
-        self._attr_unique_id = f"{coordinator.did}_mode"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        connections = (
-            {(CONNECTION_NETWORK_MAC, self._mac)} if self._mac else set()
-        )
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.did)},
-            connections=connections,
-            name="Dreame MF10",
-            model=MODEL_MF10,
-            manufacturer="Dreame",
-        )
-
-    @property
-    def current_option(self) -> str | None:
-        val = self.coordinator.data.get("mode")
-        if val is None:
-            return None
-        return MF10_MODE_OPTIONS.get(val)
-
-    async def async_select_option(self, option: str) -> None:
-        value = MF10_MODE_NAME_TO_VALUE.get(option)
-        if value is None:
-            raise HomeAssistantError(f"Unknown mode: {option}")
-        p = MF10_PROPERTY_MAP["mode"]
-        await self.coordinator.async_set_properties(
-            [{"siid": p["siid"], "piid": p["piid"], "value": value}]
         )
         await self.coordinator.async_request_refresh()

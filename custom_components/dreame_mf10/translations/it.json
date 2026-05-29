@@ -30,9 +30,6 @@
     }
   },
   "entity": {
-    "binary_sensor": {
-      "power_state": { "name": "Stato accensione" }
-    },
     "switch": {
       "child_lock": { "name": "Blocco bambini" },
       "continuous_monitoring": { "name": "Monitoraggio continuo" },
@@ -42,7 +39,7 @@
     },
     "select": {
       "oscillation": {
-        "name": "Oscillazione",
+        "name": "Oscillazione pale",
         "state": {
           "off": "Spenta",
           "left": "Sinistra",
@@ -51,21 +48,10 @@
           "both_sync": "Entrambe (sincronizzata)",
           "both_staggered": "Entrambe (sfalsata)"
         }
-      },
-      "mode": {
-        "name": "Modalità",
-        "state": {
-          "ai": "Automatica",
-          "powerful": "Potente",
-          "night": "Sonno",
-          "manual": "Manuale",
-          "natural": "Naturale"
-        }
       }
     },
     "number": {
-      "off_timer": { "name": "Timer spegnimento" },
-      "fan_speed": { "name": "Velocità" }
+      "off_timer": { "name": "Timer spegnimento" }
     }
   }
 }

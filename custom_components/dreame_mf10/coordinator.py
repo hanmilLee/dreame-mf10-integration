@@ -84,3 +84,21 @@ class MF10Coordinator(DataUpdateCoordinator[dict[str, Any]]):
             raise ConfigEntryAuthFailed(err) from err
         except (DreameConnectionError, DreameApiError) as err:
             raise HomeAssistantError(str(err)) from err
+
+    async def async_set_power(self, on: bool) -> None:
+        """Turn the fan on/off via MiOT action siid=2 aiid=1.
+
+        The power property (2,1) is read-only; on/off is performed by the action
+        with input arg in=[{piid:1, value:1|0}]. Validated 2026-05-29 against the
+        real device. The params are hardcoded here so the empty-input variant
+        (which resets the device WiFi) is structurally unreachable from HA.
+        """
+        params = [{"piid": 1, "value": 1 if on else 0}]
+        try:
+            await self._cloud.async_call_action(
+                self._did, siid=2, aiid=1, params=params, host=self._host
+            )
+        except DreameAuthError as err:
+            raise ConfigEntryAuthFailed(err) from err
+        except (DreameConnectionError, DreameApiError) as err:
+            raise HomeAssistantError(str(err)) from err

@@ -15,8 +15,6 @@ from .const import (
     MF10_OFF_TIMER_MAX,
     MF10_OFF_TIMER_MIN,
     MF10_PROPERTY_MAP,
-    MF10_SPEED_MAX,
-    MF10_SPEED_MIN,
     MODEL_MF10,
 )
 from .coordinator import MF10Coordinator
@@ -29,12 +27,7 @@ async def async_setup_entry(
 ) -> None:
     coordinator: MF10Coordinator = hass.data[DOMAIN][entry.entry_id]
     mac = entry.data.get("mac")
-    async_add_entities(
-        [
-            MF10OffTimerNumber(coordinator, mac),
-            MF10FanSpeedNumber(coordinator, mac),
-        ]
-    )
+    async_add_entities([MF10OffTimerNumber(coordinator, mac)])
 
 
 class MF10OffTimerNumber(CoordinatorEntity[MF10Coordinator], NumberEntity):
@@ -76,50 +69,6 @@ class MF10OffTimerNumber(CoordinatorEntity[MF10Coordinator], NumberEntity):
 
     async def async_set_native_value(self, value: float) -> None:
         p = MF10_PROPERTY_MAP["off_timer"]
-        await self.coordinator.async_set_properties(
-            [{"siid": p["siid"], "piid": p["piid"], "value": int(value)}]
-        )
-        await self.coordinator.async_request_refresh()
-
-
-class MF10FanSpeedNumber(CoordinatorEntity[MF10Coordinator], NumberEntity):
-    """Fan speed 1-10 (siid=2, piid=4)."""
-
-    _attr_has_entity_name = True
-    _attr_translation_key = "fan_speed"
-    _attr_icon = "mdi:fan"
-    _attr_native_min_value = MF10_SPEED_MIN
-    _attr_native_max_value = MF10_SPEED_MAX
-    _attr_native_step = 1
-    _attr_mode = NumberMode.SLIDER
-
-    def __init__(self, coordinator: MF10Coordinator, mac: str | None) -> None:
-        super().__init__(coordinator)
-        self._mac = mac
-        self._attr_unique_id = f"{coordinator.did}_fan_speed"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        connections = (
-            {(CONNECTION_NETWORK_MAC, self._mac)} if self._mac else set()
-        )
-        return DeviceInfo(
-            identifiers={(DOMAIN, self.coordinator.did)},
-            connections=connections,
-            name="Dreame MF10",
-            model=MODEL_MF10,
-            manufacturer="Dreame",
-        )
-
-    @property
-    def native_value(self) -> float | None:
-        val = self.coordinator.data.get("fan_speed")
-        if val is None:
-            return None
-        return float(val)
-
-    async def async_set_native_value(self, value: float) -> None:
-        p = MF10_PROPERTY_MAP["fan_speed"]
         await self.coordinator.async_set_properties(
             [{"siid": p["siid"], "piid": p["piid"], "value": int(value)}]
         )
