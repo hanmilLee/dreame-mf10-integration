@@ -190,6 +190,22 @@ probabilmente opzionali — i nostri get/set funzionano senza). Vedi memoria [[p
 **La conclusione "comando = MQTT" precedente è SMENTITA**: è REST, lo mancavamo per il filtro
 host. Il 19973 pinnato è solo il canale di stato/notifica, non il comando.
 
+## ✅ COMANDO REPLICATO E VALIDATO (15:4x)
+
+Testato dal nostro client con device connesso e spento:
+- `call_action.py --siid 2 --aiid 1 --params '[{"piid":1,"value":1}]'` → code:0, `(2,1)` 2→1,
+  **ventilatore acceso (confermato fisicamente dall'utente)**.
+- `--params '[{"piid":1,"value":0}]'` → code:0, `(2,1)` 1→2, spento.
+- Nessun reset WiFi. `from`/`sign`/`timestamp` NON inviati → opzionali confermato.
+
+ON/OFF remoto RISOLTO. `call_action.py` blindato (guardia anti-reset su aiid=1/2/3 con params vuoti).
+
+## Prossimo: implementazione nell'integrazione
+1. `dreame_cloud.py`: `async_set_power(did, on, host)` → `async_call_action(siid=2, aiid=1,
+   params=[{"piid":1,"value":1 if on else 0}])`.
+2. Riaprire la decisione "niente turn_on/off": aggiungere entità power (switch o FanEntity).
+3. Aggiornare CLAUDE/AGENTS/README/property_map (power NON più read-only-only: controllabile via action).
+
 ## Stato finale investigazione on/off
 
 Tutte le vie non-invasive esaurite. Il comando power è MQTT publish su broker pinnato.
