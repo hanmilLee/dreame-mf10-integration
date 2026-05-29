@@ -11,8 +11,8 @@ In caso di conflitto fra CLAUDE.md e la spec, **vince la spec**.
 ```
 Model ID: dreame.fan.u2519
 Device:   Dreame Bladeless Fan MF10
-DID:      -115387050
-MAC:      90:EB:48:22:90:EF
+DID:      <DID>
+MAC:      <MAC>
 Firmware: 1035 / Plugin 104
 ```
 
