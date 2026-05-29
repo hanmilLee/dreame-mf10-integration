@@ -4,6 +4,7 @@
 [![Validate][validate-badge]][validate]
 [![Release][release-badge]][releases]
 [![License: MIT][license-badge]](LICENSE)
+[![Stars][stars-badge]][repo]
 
 Custom [Home Assistant](https://www.home-assistant.io/) integration for the **Dreame
 Bladeless Fan MF10** (`dreame.fan.u2519`), controlled through the Dreamehome cloud.
@@ -11,6 +12,9 @@ Cloud-first — no local API assumed, just your Dreamehome account.
 
 > **Full control from Home Assistant, including power on/off** — exposed as a native `fan`
 > entity. See [On/off](#onoff) for the command details.
+
+> ⭐ **Using this integration?** Leave a star — there's no telemetry, so a star is the only
+> way to gauge how many people around the world rely on it and to help prioritize maintenance.
 
 ## Features
 
@@ -114,11 +118,26 @@ Repository layout:
 ```text
 custom_components/dreame_mf10/   # the integration
 docs/                            # MiOT property map & technical reference
-dev/                             # development material (tools, sandbox, notes)
+sandbox/                         # Docker-based HA instance for testing
+dev/                             # development material (CLIs, notes)
 ```
 
 The MiOT property map for `dreame.fan.u2519` is in
 [docs/property_map.md](docs/property_map.md).
+
+## Contributing
+
+Contributions are welcome:
+
+- **Bugs or requests** — open an [issue][issues] (bug/feature templates provided).
+- **Another Dreame fan model?** The integration is built around a model-capability map. Capture
+  your device's MiOT property map with the CLIs in `dev/tools/` and open an issue or PR with the
+  results — more models can be supported.
+- **Pull requests** — work in a feature branch and test against the Docker HA sandbox:
+  `docker compose -f sandbox/docker-compose.yml up -d` (then http://localhost:8123).
+
+If you use this integration, a ⭐ on the [repo][repo] is genuinely helpful — it's the only signal
+of how many people rely on it.
 
 ## Credits
 
@@ -136,6 +155,9 @@ command are specific to this model.
 *Not affiliated with or endorsed by Dreame. "Dreame" and "Dreamehome" are trademarks of their
 respective owners. Use at your own risk.*
 
+[repo]: https://github.com/xmavgithub/dreame-mf10-integration
+[issues]: https://github.com/xmavgithub/dreame-mf10-integration/issues
+[stars-badge]: https://img.shields.io/github/stars/xmavgithub/dreame-mf10-integration?style=flat&logo=github
 [hacs]: https://github.com/hacs/integration
 [hacs-badge]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
 [validate]: https://github.com/xmavgithub/dreame-mf10-integration/actions/workflows/validate.yml
