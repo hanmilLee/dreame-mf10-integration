@@ -169,7 +169,26 @@ Conclusione: il comando ventilatore è sul 19973 TLS-pinnato. **Transparent MITM
 Verifica aggiuntiva (15:32): aggiunto al addon il log HTTP (eventuale comando REST di fallback).
 Toggle con device che reagisce fisicamente → di nuovo NESSUN PUBLISH, NESSUN HTTP comando, solo
 reconnect loop 19973 + `$bsssvr` di avvio sul 1883. Il comando non transita su nessun canale
-leggibile (1883 chiaro né HTTP). È sul 19973 cifrato/pinnato. **Tutti i canali non-invasivi esauriti.**
+leggibile (1883 chiaro né HTTP). **MA**: la conclusione "MQTT" era ERRATA → vedi sotto.
+
+## ⭐ COMANDO POWER TROVATO (15:36) — è REST action siid=2 aiid=1
+
+Il filtro HTTP dell'addon escludeva gli host IP (l'app usa l'endpoint per IP, non hostname:
+`47.254.176.95:13267`, ecco perché Proxyman per-hostname lo mancava). Corretto il filtro per
+PATH → catturati i `sendCommand` con body. Toggle ON/OFF dall'app:
+
+- **POWER ON**: `method=action params={siid:2, aiid:1, in:[{piid:1,value:1}]}` → resp code:0,
+  poi `get(2,1)=1`.
+- **POWER OFF**: `method=action params={siid:2, aiid:1, in:[{piid:1,value:0}]}` → resp code:0,
+  poi `get(2,1)=2`.
+
+**Perché ci resettava il WiFi**: avevamo chiamato `action 2 aiid=1` con params VUOTI. Senza
+l'argomento `in=[{piid:1,value:X}]` l'azione fa reset; CON l'argomento è il power toggle.
+Dettagli payload app: `from` dentro data (`"ios"`/instance-id), `sign`+`timestamp` esterni (HMAC,
+probabilmente opzionali — i nostri get/set funzionano senza). Vedi memoria [[project_power_command_found]].
+
+**La conclusione "comando = MQTT" precedente è SMENTITA**: è REST, lo mancavamo per il filtro
+host. Il 19973 pinnato è solo il canale di stato/notifica, non il comando.
 
 ## Stato finale investigazione on/off
 

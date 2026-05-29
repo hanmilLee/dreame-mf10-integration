@@ -154,17 +154,26 @@ def tcp_end(flow):
 
 
 def request(flow):
-    """Logga richieste HTTP verso Dreame (eventuale comando REST / fallback)."""
+    """Logga i comandi REST sendCommand (per PATH, qualsiasi host — anche IP-based)."""
     try:
+        path = (flow.request.path or "").lower()
         host = flow.request.host or ""
-        if "dreame" not in host.lower() and "iot" not in host.lower():
-            return
-        method = flow.request.method
-        path = flow.request.path
-        body = flow.request.get_text() or ""
-        if method in ("POST", "PUT", "PATCH") or "command" in path.lower() or "device" in path.lower():
-            _log(f"🌐 HTTP {method} {host}{path}")
-            if body:
-                _log(f"   BODY: {body[:500]}")
+        # match per path: l'app usa endpoint IP-based, non hostname dreame
+        if "sendcommand" in path or "/device/" in path or "dreame-iot" in path:
+            method = flow.request.method
+            body = flow.request.get_text() or ""
+            _log(f"🌐🌐 COMANDO REST {method} {host}{flow.request.path}")
+            _log(f"   REQ BODY: {body}")
     except Exception as ex:
         _log(f"HTTP request hook err: {ex}")
+
+
+def response(flow):
+    """Logga la risposta dei comandi sendCommand."""
+    try:
+        path = (flow.request.path or "").lower()
+        if "sendcommand" in path or "dreame-iot" in path:
+            rbody = flow.response.get_text() or ""
+            _log(f"   RESP [{flow.response.status_code}]: {rbody[:400]}")
+    except Exception as ex:
+        _log(f"HTTP response hook err: {ex}")
