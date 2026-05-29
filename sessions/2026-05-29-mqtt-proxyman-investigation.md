@@ -129,17 +129,34 @@ comando del device**. Il device non è user-scoped: ascolta probabilmente un top
 sniffare (proxy HTTP non vede MQTT). Combinato con decompilato + ioBroker (comandi = REST),
 l'ipotesi più probabile resta: **i comandi vanno via REST**, non MQTT.
 
-## Prossimi passi (2 strade)
+## Cattura REST PULITA — ESEGUITA (15:03) — DECISIVA
 
-1. **Cattura REST pulita** (raccomandata dall'advisor, mai fatta bene): killare COMPLETAMENTE
-   l'app → abilitare SSL proxying per `eu.iot.dreame.tech` **E** `cn-airp.dreame.tech` PRIMA di
-   riaprire → toggle power. Il "nessun sendCommand visto" finora non è affidabile perché la
-   connessione all'host comando poteva essere già aperta (non decifrata dal primo byte).
-   Focus su `cn-airp.dreame.tech`/`/airpdev/` (pagina di controllo, mai esplorata).
+Due tentativi:
+- ps5 (14:57): `eu.iot.dreame.tech` rimasto `CONNECT`. Causa: wildcard `*.dreame.tech` matcha
+  un solo livello → prende `cn-airp` ma NON `eu.iot` (due etichette). Pattern corretti: host esatti.
+- ps6 (15:03): pattern `eu.iot.dreame.tech` + `cn-airp.dreame.tech` (esatti). **Entrambi decifrati
+  dal primo byte** (app killata e riaperta), toggle power durante cattura.
 
-2. **Cattura trasparente mitmproxy** (conclusiva ma più setup): Mac come hotspot + mitmproxy
-   `--mode transparent --tcp-hosts 'mt\.eu\.iot\.dreame\.tech'` → cattura TUTTO incluso MQTT
-   porta 19973. Risolve definitivamente REST-vs-MQTT e rivela il comando esatto.
+Risultato: l'UNICO traffico REST durante il toggle è `meari-cloud/redirect` (telecamere) +
+`snmac` heartbeat (`code:200`). **Nessun `sendCommand`, nessun comando, su nessun host REST.**
+
+### CONCLUSIONE DEFINITIVA
+
+Il comando power **NON viaggia via REST**. Va via **MQTT** (porta 19973), invisibile al proxy
+HTTP di iOS. Il device riceve il comando sul proprio topic di comando (ACL ci nega la lettura)
+e poi notifica lo stato su `/status/`. Per i comandi realtime (power/mode), l'app MF10 usa MQTT
+publish — diversamente da ioBroker (vacuums via REST). Il `sendCommand` REST resta valido per
+get/set delle property operative, ma il power non è esposto come property scrivibile via REST.
+
+## Prossimi passi
+
+1. **Cattura trasparente mitmproxy** (UNICA via per il comando esatto): Mac come hotspot +
+   mitmproxy `--mode transparent --tcp-hosts 'mt\.eu\.iot\.dreame\.tech'` (+ pf redirect porta
+   19973) → cattura il PUBLISH MQTT dell'app → topic + payload esatti → replicare con paho.
+2. **Win intermedio indipendente**: integrare la sottoscrizione MQTT `/status/` nell'integrazione
+   HA per state push realtime (power + tutte le property) al posto del polling 30s. Miglioria
+   concreta e shippabile anche senza risolvere il comando on/off.
+3. Mappare la nuova property `(6,30)`.
 2. **Cattura REST corretta**: killare l'app, abilitare SSL proxying su `eu.iot.dreame.tech`
    PRIMA di aprire l'app (così la connessione è decifrata dall'inizio), poi toggle power →
    il `sendCommand` dovrebbe comparire (sconfigge l'ipotesi connessione persistente).
