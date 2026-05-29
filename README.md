@@ -9,10 +9,8 @@ Custom [Home Assistant](https://www.home-assistant.io/) integration for the **Dr
 Bladeless Fan MF10** (`dreame.fan.u2519`), controlled through the Dreamehome cloud.
 Cloud-first — no local API assumed, just your Dreamehome account.
 
-> **Power on/off works.** It was the hard part: the MF10 does not accept a plain power
-> write, and the action that toggles it resets the device's WiFi if called wrong. The exact
-> command was recovered by capturing the Dreamehome app's traffic and is now driven safely
-> from Home Assistant. See [On/off](#onoff) below.
+> **Full control from Home Assistant, including power on/off** — exposed as a native `fan`
+> entity. See [On/off](#onoff) for the command details.
 
 ## Features
 
@@ -111,25 +109,23 @@ Power is performed via the MiOT action the Dreamehome app uses:
 
 ## For developers
 
-This repo also contains the reverse-engineering trail behind the integration:
+Repository layout:
 
 ```text
 custom_components/dreame_mf10/   # the integration
-docs/                            # validated MiOT property map & technical notes
-tools/                           # standalone CLIs (property scan/diff, action tester, MQTT/MITM helpers)
-sandbox/                         # Docker-based HA instance for smoke testing
-sessions/ plans/ research/ specs/  # development logs, plans, and discovery output
+docs/                            # MiOT property map & technical reference
+dev/                             # development material (tools, sandbox, notes)
 ```
 
-The full validated MiOT property map for `dreame.fan.u2519` is in
+The MiOT property map for `dreame.fan.u2519` is in
 [docs/property_map.md](docs/property_map.md).
 
 ## Credits
 
-The Dreame Cloud auth and command flow was originally adapted from
+The Dreame Cloud auth and command flow is adapted from
 [CodyJon/dreame-ap10-integration](https://github.com/CodyJon/dreame-ap10-integration)
-(ported here from sync `requests` to async `aiohttp`). The MF10 MiOT property map and the
-power command were discovered independently against the real device — not reused from AP10.
+(ported from sync `requests` to async `aiohttp`). The MF10 MiOT property map and power
+command are specific to this model.
 
 ## License
 

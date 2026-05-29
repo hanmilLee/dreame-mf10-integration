@@ -39,7 +39,7 @@ import sys
 import threading
 import time
 
-_env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+_env_path = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
 if os.path.isfile(_env_path):
     with open(_env_path) as _f:
         for _line in _f:
@@ -48,7 +48,7 @@ if os.path.isfile(_env_path):
                 _k, _, _v = _line.partition("=")
                 os.environ.setdefault(_k.strip(), _v.strip())
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "custom_components", "dreame_mf10"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "custom_components", "dreame_mf10"))
 
 import aiohttp
 import paho.mqtt.client as mqtt
@@ -163,7 +163,7 @@ def main() -> None:
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
     if args.client_cert:
-        certdir = os.path.join(os.path.dirname(__file__), "..", "tmp", "dreamehome-apk", "certs")
+        certdir = os.path.join(os.path.dirname(__file__), "..", "..", "tmp", "dreamehome-apk", "certs")
         ctx.load_cert_chain(certfile=os.path.join(certdir, "client.pem"),
                             keyfile=os.path.join(certdir, "client.key"))
         print("(uso client cert mutual TLS)")

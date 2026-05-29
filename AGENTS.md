@@ -4,7 +4,7 @@
 Custom integration Home Assistant per il ventilatore **Dreame Bladeless Fan MF10** (`dreame.fan.u2519`).
 Approccio **cloud-first** via Dreame Cloud API (credenziali Dreamehome). Nessuna API locale stabile assunta.
 
-Spec autoritativa: [specs/prompt_coding_agent_dreame_mf_10_home_assistant.md](specs/prompt_coding_agent_dreame_mf_10_home_assistant.md).
+Spec autoritativa: [dev/specs/prompt_coding_agent_dreame_mf_10_home_assistant.md](dev/specs/prompt_coding_agent_dreame_mf_10_home_assistant.md).
 In caso di conflitto fra AGENTS.md e la spec, **vince la spec**.
 
 ## Dispositivo target
@@ -21,7 +21,7 @@ Firmware: 1035 / Plugin 104
 
 Property map validata empiricamente: 13 property utilizzabili, mappate via before/after diff
 con app Dreamehome. Vedi [docs/property_map.md](docs/property_map.md) e
-[sessions/2026-05-28-property-discovery.md](sessions/2026-05-28-property-discovery.md).
+[dev/sessions/2026-05-28-property-discovery.md](dev/sessions/2026-05-28-property-discovery.md).
 
 Cosa funziona (entità HA esposte):
 
@@ -42,9 +42,9 @@ Cosa funziona (entità HA esposte):
 - `siid=2, piid=1` resta read-only: è solo l'**indicatore** di stato (1=on, 2=standby), letto dal coordinator.
 - ⚠️ **L'action aiid=1 con params VUOTI `[]` resetta il WiFi**. Il power funziona SOLO con
   l'argomento `in=[{piid:1,value}]`. `coordinator.async_set_power` hardcoda i params → reset
-  irraggiungibile dall'integrazione. `tools/call_action.py` ha una guardia anti-reset.
+  irraggiungibile dall'integrazione. `dev/tools/call_action.py` ha una guardia anti-reset.
 - La conclusione precedente "on/off impossibile / MQTT" era ERRATA (l'app usa REST su endpoint
-  IP-based, mancato dalle catture per-hostname). Vedi [sessions/2026-05-29-mqtt-proxyman-investigation.md].
+  IP-based, mancato dalle catture per-hostname). Vedi [dev/sessions/2026-05-29-mqtt-proxyman-investigation.md].
 
 Property non rilevabili / pericolose:
 
@@ -66,7 +66,7 @@ custom_components/dreame_mf10/
   config_flow.py  coordinator.py  dreame_cloud.py
   fan.py  sensor.py  switch.py  select.py  number.py
   strings.json  translations/{en,it}.json
-tools/
+dev/tools/
   scan_properties.py   # CLI standalone per snapshot proprietà
   diff_properties.py   # diff fra due snapshot
   call_action.py       # test manuale action MiOT (solo on-demand)
@@ -83,7 +83,7 @@ noto e validato. Le altre primitive (switch/select/number) restano granulari per
 - **Property map provvisoria != definitiva**: tenere separate `MF10_PROPERTY_CANDIDATES` (sperimentale) e `MF10_PROPERTY_MAP` (validata empiricamente). Non hardcodare prima della validazione.
 - **Non esporre come stabili funzioni non verificate**: dietro flag `experimental_entities` (default off).
 - **Polling**: default 30s, mai sotto 10s. Refresh immediato dopo ogni comando.
-- **Action MiOT mai chiamate alla cieca all'avvio**: solo via `tools/call_action.py` esplicito. Le action possono muovere pale/spegnere/resettare.
+- **Action MiOT mai chiamate alla cieca all'avvio**: solo via `dev/tools/call_action.py` esplicito. Le action possono muovere pale/spegnere/resettare.
 - **Power = action 2/1 con input obbligatorio**: on/off via `action siid=2 aiid=1 in=[{piid:1,value:1|0}]`.
   ⚠️ La stessa action con `in` VUOTO resetta il WiFi. Usare sempre `coordinator.async_set_power`
   (params hardcoded) — mai costruire l'action power a mano.
@@ -100,22 +100,22 @@ Utente può: vedere disponibilità, accendere, spegnere (o soft-off), impostare 
 ## Workflow di sviluppo in questo repo
 
 ### Struttura cartelle di lavoro
-- [specs/](specs/) — spec autoritative del progetto (input immutabile)
-- [plans/](plans/) — piani di lavoro per fase/milestone (`phase1-milestone1.md`, ecc.). Un piano vivo per sessione di lavoro.
-- [sessions/](sessions/) — log per sessione (`YYYY-MM-DD-topic.md`): cosa fatto, decisioni, blocchi, prossimi passi.
+- [dev/specs/](dev/specs/) — spec autoritative del progetto (input immutabile)
+- [dev/plans/](dev/plans/) — piani di lavoro per fase/milestone (`phase1-milestone1.md`, ecc.). Un piano vivo per sessione di lavoro.
+- [dev/sessions/](dev/sessions/) — log per sessione (`YYYY-MM-DD-topic.md`): cosa fatto, decisioni, blocchi, prossimi passi.
 - [docs/](docs/) — documentazione tecnica derivata (`property_map.md`, troubleshooting, ecc.).
-- [research/](research/) — output di discovery: `snapshots/` (JSON da `scan_properties.py`), `diffs/` (output `diff_properties.py`), note di reverse engineering.
+- [dev/research/](dev/research/) — output di discovery: `snapshots/` (JSON da `scan_properties.py`), `diffs/` (output `diff_properties.py`), note di reverse engineering.
 - [sandbox/](sandbox/) — istanza Docker locale di Home Assistant per smoke test dell'integrazione (`docker compose -f sandbox/docker-compose.yml up -d`, poi http://localhost:8123). Vedi [sandbox/README.md](sandbox/README.md).
 
 ### Convenzioni
-- Ogni nuova sessione: leggi `CLAUDE.md` + il piano attivo in `plans/` + le ultime note in `sessions/`.
-- Snapshot proprietà: nome `before-<azione>.json` / `after-<azione>.json`, conservati in `research/snapshots/`.
+- Ogni nuova sessione: leggi `CLAUDE.md` + il piano attivo in `dev/plans/` + le ultime note in `dev/sessions/`.
+- Snapshot proprietà: nome `before-<azione>.json` / `after-<azione>.json`, conservati in `dev/research/snapshots/`.
 - Mai committare credenziali Dreamehome. Usare env vars (`DREAME_USERNAME`, `DREAME_PASSWORD`). Aggiungere a `.gitignore` qualsiasi file `*.local.json` o `secrets*`.
 - Repo pubblico su GitHub: **prima di committare**, verificare diff per assenza di credenziali, DID/MAC sensibili nei log di esempio (sostituire con placeholder nei docs).
 - **Commit periodici e piccoli**: committare al termine di ogni unità logica completata (un milestone, un file di feature, un fix dell'advisor accorpato, ecc.). Niente mega-commit di intere sessioni. Linee guida:
   - Un commit = un cambiamento concettuale (es. "M0 scaffolding", "fix advisor M0 review", "M2 coordinator wiring"). Se serve `e` nel messaggio per descrivere il commit, è probabilmente da spezzare.
   - Mai committare WIP rotto su `main`. Se devi salvare uno stato intermedio non funzionante, usa un branch.
-  - Prima di ogni commit: `git status` + `git diff` per verificare niente credenziali, niente snapshot `research/` non redacted, niente token nei log di esempio.
+  - Prima di ogni commit: `git status` + `git diff` per verificare niente credenziali, niente snapshot `dev/research/` non redacted, niente token nei log di esempio.
   - Messaggio commit: imperativo, italiano o inglese coerente nella sessione. Body opzionale solo se il "perché" non è ovvio dal diff.
   - Push su `main` solo dopo conferma esplicita dell'utente (repo pubblico).
 - **Advisor gate (obbligatorio)**: ogni sessione di sviluppo deve passare per `advisor()` almeno **due volte**:

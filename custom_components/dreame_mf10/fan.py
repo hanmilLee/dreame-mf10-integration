@@ -1,14 +1,10 @@
 """Fan platform for the Dreame MF10 integration.
 
-Power on/off is performed via MiOT action siid=2 aiid=1 (input piid=1, value 1/0),
-validated 2026-05-29 against the real device. The power property (2,1) itself is
-read-only; the older "niente fan.py — turn_on/off non supportabile" rationale is
-obsolete now that the action-based toggle is known.
-
-Fan speed (siid=2, piid=4) is only honored by the device in MANUAL mode, so
-set_percentage switches the device to manual before applying the speed.
-Device rotation and blade oscillation are exposed as separate primitives
-(switch/select), not on this entity.
+Power on/off uses MiOT action siid=2 aiid=1 with input arg [{piid:1, value:1|0}];
+the power property (2,1) itself is read-only. Fan speed (siid=2, piid=4) is only
+honored by the device in MANUAL mode, so set_percentage switches the device to
+manual before applying the speed. Device rotation and blade oscillation are exposed
+as separate primitives (switch/select), not on this entity.
 """
 
 from __future__ import annotations

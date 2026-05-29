@@ -18,7 +18,7 @@
 # (device "Disconnesso" nell'app) e non vedremo PUBLISH: in quel caso il MITM e' bloccato.
 
 set -e
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 CERT="tmp/dreamehome-apk/certs/client-combined.pem"
 

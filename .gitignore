@@ -22,13 +22,13 @@ credentials*.json
 *.pcapng
 
 # Snapshot di discovery (possono contenere DID/MAC/dati device)
-research/snapshots/*.json
-research/diffs/*.txt
-research/diffs/*.json
-!research/snapshots/.gitkeep
-!research/diffs/.gitkeep
-!research/snapshots/example.json
-!research/diffs/example.txt
+dev/research/snapshots/*.json
+dev/research/diffs/*.txt
+dev/research/diffs/*.json
+!dev/research/snapshots/.gitkeep
+!dev/research/diffs/.gitkeep
+!dev/research/snapshots/example.json
+!dev/research/diffs/example.txt
 
 # Repo di riferimento locali (clonati per consultazione offline)
 tmp/

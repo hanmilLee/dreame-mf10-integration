@@ -6,8 +6,8 @@
   "dependencies": [],
   "documentation": "https://github.com/xmavgithub/dreame-mf10-integration",
   "integration_type": "device",
-  "issue_tracker": "https://github.com/xmavgithub/dreame-mf10-integration/issues",
   "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/xmavgithub/dreame-mf10-integration/issues",
   "requirements": [],
   "version": "0.1.0"
 }

@@ -30,9 +30,8 @@ import aiohttp
 
 _LOGGER = logging.getLogger(__name__)
 
-# Static constants extracted from the Dreamehome iOS app (reused as-is from the
-# upstream reverse-engineering by CodyJon). These are NOT secrets — they are
-# the public app identity sent by every Dreamehome client.
+# Static constants that identify the Dreamehome app to the cloud. These are NOT
+# secrets — they are the public app identity sent by every Dreamehome client.
 _DREAME_SALT = "RAylYC%fmSKp7%Tq"
 _DREAME_USER_AGENT = "Dreame_Smarthome/2.1.9 (iPhone; iOS 18.4.1; Scale/3.00)"
 _DREAME_AUTH_BASIC = "Basic ZHJlYW1lX2FwcHYxOkFQXmR2QHpAU1FZVnhOODg="

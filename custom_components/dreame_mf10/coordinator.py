@@ -89,9 +89,9 @@ class MF10Coordinator(DataUpdateCoordinator[dict[str, Any]]):
         """Turn the fan on/off via MiOT action siid=2 aiid=1.
 
         The power property (2,1) is read-only; on/off is performed by the action
-        with input arg in=[{piid:1, value:1|0}]. Validated 2026-05-29 against the
-        real device. The params are hardcoded here so the empty-input variant
-        (which resets the device WiFi) is structurally unreachable from HA.
+        with input arg in=[{piid:1, value:1|0}]. The params are hardcoded here so
+        the empty-input variant (which resets the device WiFi) is structurally
+        unreachable from HA.
         """
         params = [{"piid": 1, "value": 1 if on else 0}]
         try:

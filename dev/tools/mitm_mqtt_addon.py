@@ -23,7 +23,7 @@ from __future__ import annotations
 import os
 import time
 
-LOGFILE = os.path.join(os.path.dirname(__file__), "..", "tmp", "mqtt_capture.log")
+LOGFILE = os.path.join(os.path.dirname(__file__), "..", "..", "tmp", "mqtt_capture.log")
 
 # MQTT control packet types (high nibble del primo byte)
 PKT = {1: "CONNECT", 2: "CONNACK", 3: "PUBLISH", 4: "PUBACK", 8: "SUBSCRIBE",

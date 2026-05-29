@@ -28,8 +28,8 @@ MF10_POWER_ON = 1
 MF10_POWER_OFF = 2
 
 # Provisional MiOT property candidates for dreame.fan.u2519.
-# These are NOT validated — they must be confirmed via discovery (tools/scan_properties.py)
-# before being promoted into MF10_PROPERTY_MAP.
+# These are NOT validated — confirm against the device before promoting them into
+# MF10_PROPERTY_MAP.
 MF10_PROPERTY_CANDIDATES: dict[str, list[dict[str, int]]] = {
     # Confirmed (see docs/property_map.md)
     "power": [{"siid": 2, "piid": 1}],
@@ -56,9 +56,8 @@ MF10_PROPERTY_CANDIDATES: dict[str, list[dict[str, int]]] = {
     ],
 }
 
-# Validated property map — populated from before/after diff discovery session
-# 2026-05-22 on device dreame.fan.u2519 (did=-115387050, region=eu).
-# These are the canonical (siid, piid) for production polling and entity state.
+# Canonical, validated MiOT property map for dreame.fan.u2519.
+# These are the (siid, piid) used for production polling and entity state.
 MF10_PROPERTY_MAP: dict[str, dict] = {
     "power": {"siid": 2, "piid": 1},              # 1=ON, 2=OFF — read-only
     "mode": {"siid": 2, "piid": 3},               # 0=AI auto, 1=Potente, 2=Sonno, 3=Manuale, 7=Naturale
@@ -75,7 +74,7 @@ MF10_PROPERTY_MAP: dict[str, dict] = {
     "temperature": {"siid": 3, "piid": 2},              # °C, read-only sensor
 }
 
-# Properties discovered but NOT yet identified:
+# Properties present but NOT yet identified:
 #   (2, 2) — always 0 across all modes and states
 #   (2, 7) — always 0 across all oscillation tests; purpose unknown
 #   (2, 8) — always 0
