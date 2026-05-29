@@ -110,6 +110,8 @@ def main() -> None:
     parser.add_argument("--allow-action", action="store_true",
                         help="Permette method=action (PERICOLOSO: WiFi reset). Richiede conferma.")
     parser.add_argument("--listen-secs", type=int, default=6, help="Secondi di ascolto eco dopo publish")
+    parser.add_argument("--client-cert", action="store_true",
+                        help="Usa il client cert dell'app (mutual TLS) da tmp/dreamehome-apk/certs/")
     args = parser.parse_args()
 
     if args.method == "action" and not args.allow_action:
@@ -160,6 +162,11 @@ def main() -> None:
     ctx = ssl.create_default_context()
     ctx.check_hostname = False
     ctx.verify_mode = ssl.CERT_NONE
+    if args.client_cert:
+        certdir = os.path.join(os.path.dirname(__file__), "..", "tmp", "dreamehome-apk", "certs")
+        ctx.load_cert_chain(certfile=os.path.join(certdir, "client.pem"),
+                            keyfile=os.path.join(certdir, "client.key"))
+        print("(uso client cert mutual TLS)")
     client.tls_set_context(ctx)
 
     connected = threading.Event()
