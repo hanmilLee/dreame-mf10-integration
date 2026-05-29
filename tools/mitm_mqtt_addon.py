@@ -94,10 +94,39 @@ def _handle_packet(ptype, flags, body, direction):
         _log(f"⚡ PUBLISH [{arrow}] qos={qos}")
         _log(f"   TOPIC:   {topic}")
         _log(f"   PAYLOAD: {payload}")
-    elif ptype == 1:  # CONNECT
-        _log(f"CONNECT [{arrow}] ({len(body)} byte)")
-    elif ptype == 8:  # SUBSCRIBE
-        _log(f"SUBSCRIBE [{arrow}] ({len(body)} byte)")
+    elif ptype == 1:  # CONNECT — estrai clientId, username, password
+        try:
+            i = 0
+            plen = (body[i] << 8) | body[i + 1]; i += 2
+            proto = body[i:i + plen].decode("utf-8", "replace"); i += plen
+            i += 1  # protocol level
+            cflags = body[i]; i += 1
+            i += 2  # keepalive
+            def _str(b, j):
+                ln = (b[j] << 8) | b[j + 1]
+                return b[j + 2:j + 2 + ln].decode("utf-8", "replace"), j + 2 + ln
+            cid, i = _str(body, i)
+            user = pwd = None
+            if cflags & 0x04:  # will
+                wt, i = _str(body, i); wp, i = _str(body, i)
+            if cflags & 0x80:  # username
+                user, i = _str(body, i)
+            if cflags & 0x40:  # password
+                pwd, i = _str(body, i)
+            _log(f"CONNECT [{arrow}] proto={proto} clientId={cid} user={user} pass={('<'+str(len(pwd))+' char>') if pwd else None}")
+        except Exception as ex:
+            _log(f"CONNECT [{arrow}] ({len(body)} byte) parse-err {ex}")
+    elif ptype == 8:  # SUBSCRIBE — estrai i topic filter
+        try:
+            i = 2  # packet identifier
+            topics = []
+            while i < len(body):
+                ln = (body[i] << 8) | body[i + 1]; i += 2
+                topics.append(body[i:i + ln].decode("utf-8", "replace")); i += ln
+                i += 1  # qos
+            _log(f"SUBSCRIBE [{arrow}] topics={topics}")
+        except Exception as ex:
+            _log(f"SUBSCRIBE [{arrow}] ({len(body)} byte) parse-err {ex}")
     elif ptype in (4, 9, 2, 12, 13):
         pass  # ack/ping rumorosi, ignora
     else:
@@ -122,3 +151,20 @@ def tcp_message(flow):
 def tcp_end(flow):
     for d in ("c2s", "s2c"):
         _buffers.pop((id(flow), d), None)
+
+
+def request(flow):
+    """Logga richieste HTTP verso Dreame (eventuale comando REST / fallback)."""
+    try:
+        host = flow.request.host or ""
+        if "dreame" not in host.lower() and "iot" not in host.lower():
+            return
+        method = flow.request.method
+        path = flow.request.path
+        body = flow.request.get_text() or ""
+        if method in ("POST", "PUT", "PATCH") or "command" in path.lower() or "device" in path.lower():
+            _log(f"🌐 HTTP {method} {host}{path}")
+            if body:
+                _log(f"   BODY: {body[:500]}")
+    except Exception as ex:
+        _log(f"HTTP request hook err: {ex}")

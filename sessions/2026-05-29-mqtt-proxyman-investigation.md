@@ -148,15 +148,45 @@ e poi notifica lo stato su `/status/`. Per i comandi realtime (power/mode), l'ap
 publish — diversamente da ioBroker (vacuums via REST). Il `sendCommand` REST resta valido per
 get/set delle property operative, ma il power non è esposto come property scrivibile via REST.
 
-## Prossimi passi
+## MITM trasparente mitmproxy WireGuard — ESEGUITO (15:24-15:27) — BLOCCATO da pinning
 
-1. **Cattura trasparente mitmproxy** (UNICA via per il comando esatto): Mac come hotspot +
-   mitmproxy `--mode transparent --tcp-hosts 'mt\.eu\.iot\.dreame\.tech'` (+ pf redirect porta
-   19973) → cattura il PUBLISH MQTT dell'app → topic + payload esatti → replicare con paho.
-2. **Win intermedio indipendente**: integrare la sottoscrizione MQTT `/status/` nell'integrazione
-   HA per state push realtime (power + tutte le property) al posto del polling 30s. Miglioria
-   concreta e shippabile anche senza risolvere il comando on/off.
-3. Mappare la nuova property `(6,30)`.
+Setup: `mitmdump --mode wireguard --tcp-hosts 'mt\.eu\.iot\.dreame\.tech' --set
+client_certs=client-combined.pem -s tools/mitm_mqtt_addon.py`. iPhone via tunnel WireGuard
+(QR), CA mitmproxy installata e trustata.
+
+Risultato:
+- **Porta 19973** (`mt.eu.iot.dreame.tech`, broker device): solo "TCP flow aperto" in reconnect
+  loop, MAI un CONNECT decodificato → **l'app rifiuta il cert di mitmproxy = PINNING**. L'app usa
+  SecurityContext custom con `cacert.pem` (GlobalSign) bundleato. Mentre il MITM intercetta, il
+  comando non parte (device non reagisce fisicamente). **MITM bloccato sul canale del ventilatore.**
+- **Porta 1883** (Alibaba 8.209.x, IN CHIARO): decodificato CONNECT + SUBSCRIBE, ma è un servizio
+  DIVERSO — topic `$bsssvr/iot/{thing}/{clientId}/event/update/accepted`,
+  `$bsssvr/iot/presence/disconnected/{thing}`. Presence/eventi, NON comando ventilatore.
+  clientId numerico, username base64, thing-id 32-hex (non il nostro did/mac).
+
+Conclusione: il comando ventilatore è sul 19973 TLS-pinnato. **Transparent MITM non può decifrarlo.**
+
+Verifica aggiuntiva (15:32): aggiunto al addon il log HTTP (eventuale comando REST di fallback).
+Toggle con device che reagisce fisicamente → di nuovo NESSUN PUBLISH, NESSUN HTTP comando, solo
+reconnect loop 19973 + `$bsssvr` di avvio sul 1883. Il comando non transita su nessun canale
+leggibile (1883 chiaro né HTTP). È sul 19973 cifrato/pinnato. **Tutti i canali non-invasivi esauriti.**
+
+## Stato finale investigazione on/off
+
+Tutte le vie non-invasive esaurite. Il comando power è MQTT publish su broker pinnato.
+
+Vie residue per il comando esatto (invasive):
+- **Frida** (pinning-proof): hooka il publish prima del TLS. Serve iPhone jailbroken o IPA repackaged.
+- **Repackage APK Android**: sostituire `cacert.pem` nell'APK con la CA di mitmproxy, resign,
+  girare su Android → l'app si fida del MITM. Serve device/emulatore Android.
+
+## Prossimi passi (raccomandati)
+
+1. **Win shippabile**: integrare subscribe MQTT `/status/` nell'integrazione HA per state push
+   realtime (power + property) al posto del polling 30s. Indipendente dal comando on/off.
+   Vedi memoria [[project_mqtt_push_state]]. Riusare `tools/mqtt_listen.py`.
+2. Mappare la nuova property `(6,30)`.
+3. (Opzionale, invasivo) Frida o repackage APK per il comando power.
 2. **Cattura REST corretta**: killare l'app, abilitare SSL proxying su `eu.iot.dreame.tech`
    PRIMA di aprire l'app (così la connessione è decifrata dall'inizio), poi toggle power →
    il `sendCommand` dovrebbe comparire (sconfigge l'ipotesi connessione persistente).
