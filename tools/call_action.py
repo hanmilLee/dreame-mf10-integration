@@ -90,6 +90,10 @@ async def main() -> None:
     parser.add_argument("--read-prop", action="store_true", help="Leggi il valore corrente di siid/piid")
     parser.add_argument("--toggle-power", action="store_true",
                         help="Leggi power state → chiama action siid=2 aiid=3 → ri-leggi → mostra diff")
+    parser.add_argument("--raw-method", type=str, default=None,
+                        help="Invia un method MiOT/MIIO arbitrario (es. set_power, power_on)")
+    parser.add_argument("--raw-params", type=str, default="[]",
+                        help="JSON params per --raw-method (default: [])")
     parser.add_argument("--params", type=str, default="[]", help="JSON array di input params per action (default: [])")
     parser.add_argument("--region", type=str, default=None, help="Dreame region (default: DREAME_REGION env o eu)")
     args = parser.parse_args()
@@ -101,13 +105,13 @@ async def main() -> None:
     if args.set_prop and (args.siid is None or args.piid is None or args.value is None):
         print("ERROR: --set-prop richiede --siid, --piid e --value")
         sys.exit(1)
-    if not args.read_prop and not args.set_prop and not args.toggle_power:
+    if args.raw_method is None and not args.read_prop and not args.set_prop and not args.toggle_power:
         if args.siid is None or args.aiid is None:
-            print("ERROR: per action call fornire --siid e --aiid, oppure usa --read-prop / --set-prop / --toggle-power")
+            print("ERROR: per action call fornire --siid e --aiid, oppure usa --read-prop / --set-prop / --toggle-power / --raw-method")
             sys.exit(1)
 
     # Conferma interattiva per action generiche (non --toggle-power che ha la propria)
-    if not args.set_prop and not args.read_prop and not args.toggle_power:
+    if not args.set_prop and not args.read_prop and not args.toggle_power and not args.raw_method:
         print(f"\n⚠️  ATTENZIONE: stai per eseguire l'action siid={args.siid} aiid={args.aiid}")
         print("   Le action possono cambiare lo stato fisico del device.")
         confirm = input("   Digita 'esegui' per confermare: ").strip()
@@ -147,7 +151,30 @@ async def main() -> None:
         print(f"\nDevice: {model}  did={did}  host={host}")
 
         try:
-            if args.toggle_power:
+            if args.raw_method:
+                try:
+                    raw_params = json.loads(args.raw_params)
+                except json.JSONDecodeError as e:
+                    print(f"ERROR: --raw-params JSON non valido: {e}")
+                    sys.exit(1)
+                print(f"\nraw method: {args.raw_method!r}  params={raw_params}")
+                # Bypassa _send_command (che lancia su code!=0) per vedere la risposta grezza
+                await cloud._ensure_token()
+                host_prefix = f"-{host.split('.')[0]}" if host else ""
+                url = f"{cloud.api_url}/dreame-iot-com{host_prefix}/device/sendCommand"
+                payload = {
+                    "did": str(did),
+                    "id": 1,
+                    "data": {"did": str(did), "id": 1, "method": args.raw_method, "params": raw_params},
+                }
+                import aiohttp as _aiohttp
+                async with session.post(url, headers=cloud._auth_headers(), json=payload,
+                                        timeout=_aiohttp.ClientTimeout(total=15)) as resp:
+                    body = await resp.json(content_type=None)
+                print(f"HTTP {resp.status}")
+                print(json.dumps(body, indent=2, ensure_ascii=False))
+
+            elif args.toggle_power:
                 # BLOCCATO: siid=2 aiid=3 causa reset WiFi sul MF10 (dreame.fan.u2519).
                 # Non è toggle power — è un'azione di reset. Confermato 2026-05-28.
                 # Rimuovere questo blocco solo dopo aver identificato l'action corretta per il MF10.

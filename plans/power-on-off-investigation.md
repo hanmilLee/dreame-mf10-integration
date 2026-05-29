@@ -314,6 +314,25 @@ Prima di ogni test ad alto rischio (E*, H3):
 | 2026-05-28 | A1 parziale (siid 2 piid 21-40, siid 3 piid 4-15, siid 4 piid 9-20, siid 6 piid 13-25, siid 21-30 piid 1-3) | **nessuna property nuova** (0/87 — 55 alias, 32 80001) | `tmp/full-scan-off.json` |
 | 2026-05-28 | Diff property note ON vs OFF (19 prop) | solo `(2,1)` `(2,8)` `(3,2)` cambiano — niente di nuovo | `tmp/full-on.json`, `tmp/full-off.json` |
 | 2026-05-28 | A1 dettagliato (stessi 87 probe ON e OFF) — diff completo response per response | **nessuna property reale**. Tutte le differenze ON/OFF sono alias del relay verso `(2,1)`/`(2,4)`/`(4,1)`/`(4,2)` con i loro valori correnti, oppure timeout di rete aleatori | `tmp/full-scan-on-detailed.json`, `tmp/full-scan-off-detailed.json` |
+| 2026-05-29 | F1 — method legacy `set_power`/`power_on`/`power_off`/`app_start`/`device_on` (vari params) | tutti 80001 tranne `power_on ["on"]`=code0 ma è get cached, NON accende | `tools/call_action.py --raw-method` |
+| 2026-05-29 | G1 — analisi endpoint CodyJon/ap10 | stesso unico endpoint `sendCommand`, nessuna alternativa | — |
+| 2026-05-29 | H1 — 4 catture Proxyman, ON/OFF+mode da app | **zero sendCommand/POST comando**. MQTT (19973) bypassa proxy HTTP. Solo meari-redirect + snmac heartbeat | `tmp/ps4/` |
+| 2026-05-29 | Campo `from` in sendCommand `set_properties(2,1,1)` (from=uid/did/"") | tutti 80001 — `from` non sblocca, (2,1) read-only | `tools/test_from_field.py` |
+| 2026-05-29 | Connessione MQTT subscriber al broker | **OK** (clientId/uid/token, no cert, rejectUnauthorized off) | `tools/mqtt_listen.py` |
+
+### Conclusione (2026-05-29)
+
+MQTT è **solo ricezione** (confermato da decompilato app + ioBroker.dreame). I comandi
+vanno via REST `sendCommand`. Il power-on dell'app NON è catturabile via proxy HTTP
+(o è MQTT invisibile, o connessione persistente non decifrata). Strade aperte:
+
+1. **Test MQTT interattivo** — `mqtt_listen.py --wildcard` + toggle da app: vedere se arriva
+   `properties_changed` su (2,1) e se un comando passa da MQTT
+2. **Cattura REST corretta** — kill app → SSL proxying su `eu.iot.dreame.tech` PRIMA di aprire
+   → toggle → il sendCommand dovrebbe comparire
+3. **REST `cn-airp.dreame.tech`/`/airpdev/`** — superficie mai esplorata, usata dalla pagina di controllo
+4. **C1** — `mode` valori non documentati (basso rischio)
+5. **E1+** — action aiid > 3 (ALTO rischio: WiFi reset)
 
 ### Conclusione provvisoria (2026-05-28)
 
