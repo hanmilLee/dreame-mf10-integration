@@ -101,9 +101,6 @@ Power is performed via the MiOT action the Dreamehome app uses:
   not yet controllable.
 - **State updates are polled** (30 s) plus an immediate refresh after each HA command. The
   device also pushes state over MQTT; switching to real-time push is a planned follow-up.
-- `async_step_reauth` is not implemented — if credentials expire, remove and re-add the
-  integration.
-
 ## Security
 
 - Passwords are MD5-salted before being sent (matching the Dreamehome app); they are not
