@@ -112,6 +112,56 @@ class DreameMF10ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema({vol.Required("did"): vol.In(options)}),
         )
 
+    async def async_step_reauth(
+        self, entry_data: dict[str, Any]
+    ) -> ConfigFlowResult:
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        reauth_entry = self._get_reauth_entry()
+
+        if user_input is not None:
+            session = async_get_clientsession(self.hass)
+            client = DreameCloud(
+                username=user_input[CONF_USERNAME],
+                password=user_input[CONF_PASSWORD],
+                region=reauth_entry.data[CONF_REGION],
+                session=session,
+            )
+            try:
+                await client.async_login()
+            except DreameAuthError:
+                errors["base"] = "invalid_auth"
+            except DreameConnectionError:
+                errors["base"] = "cannot_connect"
+            except Exception:  # noqa: BLE001
+                _LOGGER.exception("Unexpected error during Dreame MF10 reauth")
+                errors["base"] = "unknown"
+            else:
+                return self.async_update_reload_and_abort(
+                    reauth_entry,
+                    data_updates={
+                        CONF_USERNAME: user_input[CONF_USERNAME],
+                        CONF_PASSWORD: user_input[CONF_PASSWORD],
+                    },
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_USERNAME, default=reauth_entry.data[CONF_USERNAME]
+                    ): str,
+                    vol.Required(CONF_PASSWORD): str,
+                }
+            ),
+            errors=errors,
+        )
+
     async def _create_entry(self, device: dict[str, Any]) -> ConfigFlowResult:
         did = str(device.get("did"))
         await self.async_set_unique_id(did)

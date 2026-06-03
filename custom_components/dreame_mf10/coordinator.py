@@ -57,8 +57,6 @@ class MF10Coordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._did, _POLL_PROPERTIES, host=self._host
             )
         except DreameAuthError as err:
-            # TODO(M4-hardening): async_step_reauth not yet implemented in config_flow.
-            # ConfigEntryAuthFailed will mark the entry as REAUTH_REQUIRED in HA UI.
             raise ConfigEntryAuthFailed(err) from err
         except (DreameConnectionError, DreameApiError) as err:
             raise UpdateFailed(err) from err

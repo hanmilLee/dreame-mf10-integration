@@ -16,6 +16,14 @@
         "data": {
           "did": "Dispositivo"
         }
+      },
+      "reauth_confirm": {
+        "title": "Riautenticazione Dreame MF10",
+        "description": "Le credenziali Dreamehome non sono più valide. Inserisci username e password per ripristinare la connessione.",
+        "data": {
+          "username": "Email / Username",
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -26,7 +34,8 @@
     },
     "abort": {
       "already_configured": "Questo dispositivo è già configurato.",
-      "no_supported_devices": "Nessun Dreame MF10 (dreame.fan.u2519) trovato su questo account."
+      "no_supported_devices": "Nessun Dreame MF10 (dreame.fan.u2519) trovato su questo account.",
+      "reauth_successful": "Riautenticazione completata. L'integrazione si ricaricherà."
     }
   },
   "entity": {
