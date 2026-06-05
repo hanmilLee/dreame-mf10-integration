@@ -4,25 +4,36 @@ Validated empirically via a before/after diff workflow
 (`dev/tools/scan_properties.py` + `dev/tools/diff_properties.py`).
 
 Device: `dreame.fan.u2519` · DID: `<DID>` · Region: `eu`
-Firmware: 1035 / Plugin 104
+Firmware: **1043 / Plugin 116** (aggiornato 2026-06-05; in precedenza 1035 / Plugin 104)
 
-## Validated properties
+> ⚠️ **L'aggiornamento firmware 1035→1043 ha spostato alcune property MiOT.**
+> Vedi la sezione [Firmware migration history](#firmware-migration-history) in fondo.
+> Le posizioni nella tabella sotto sono quelle **fw1043 validate empiricamente**.
+
+## Validated properties (fw1043)
 
 | Property | siid | piid | Type | Values |
 |----------|------|------|------|--------|
 | power | 2 | 1 | int | 1 = ON, 2 = OFF — indicatore **read-only** (set_properties → 80001). On/off via action 2/1 (vedi sotto) |
 | mode | 2 | 3 | int | see mode table below |
 | fan_speed | 2 | 4 | int | 1–10 (min–max) |
-| child_lock | 2 | 5 | int | 0 = OFF, 1 = ON |
-| blade_oscillation | 2 | 6 | int | 0 = nessuna, 1 = sinistra, 2 = destra, 3 = entrambe |
+| child_lock | 6 | 10 | int | 0 = OFF, 1 = ON — **spostata da (2,5) in fw1043** |
+| blade_oscillation | 2 | 8 | int | 0 = nessuna, 1 = sinistra, 2 = destra, 3 = entrambe — **spostata da (2,6) in fw1043** |
 | device_rotation | 2 | 7 | int | 0 = off, 1 = on (rotazione del dispositivo su se stesso) |
-| sync_oscillation | 2 | 11 | int | 0 = off, 1 = on (pale si muovono in sincrono) |
+| sync_oscillation | 2 | 9 | int | 0 = off, 1 = on (pale in sincrono) — **spostata da (2,11) in fw1043** |
 | staggered_oscillation | 2 | 12 | int | 0 = off, 1 = on (pale sfasate) — si esclude con sync |
-| continuous_monitoring | 2 | 10 | int | 0 = off, 1 = on (TempSync / monitoraggio continuo) |
-| key_tone | 6 | 7 | int | 0 = off, 1 = on (tono tasti / beep) |
-| display | 6 | 11 | int | 0 = off, 1 = on (display LED) |
-| off_timer | 2 | 8 | int | 0 = disattivato, N = ore (timer spegnimento automatico) |
 | temperature | 3 | 2 | int | °C, read-only ambient sensor |
+
+### Rimosse dall'integrazione in fw1043
+
+Queste property non sono più esposte come entità HA. Vedi la storia di migrazione per il dettaglio.
+
+| Property | fw1035 | Motivo |
+|----------|--------|--------|
+| key_tone | (6,7) | Property dinamica: ritorna 80001 quando OFF, 1 quando ON → rompe il batch polling |
+| display LED | (6,11) | (6,11) in fw1043 ritorna la stringa timezone (`Europe/Rome`), non è più il LED |
+| off_timer | (2,8) | (2,8) è ora `blade_oscillation`; nuova posizione del timer non identificata |
+| continuous_monitoring | (2,10) | Semantica cambiata (legge 1 o 2, mai 0); comportamento non confermato |
 
 ### Mode values (siid=2, piid=3)
 
@@ -106,3 +117,38 @@ probed and rejected by the backend (device doesn't expose them):
 | Feature | Nota |
 |---------|------|
 | Velocità oscillazione pale (standard/rapido) | Non muta alcuna property leggibile — probabilmente parametro contestuale nel comando oscillazione |
+
+## Firmware migration history
+
+### 1035 / Plugin 104 → 1043 / Plugin 116 (2026-06-05)
+
+L'aggiornamento firmware ha **spostato la posizione (siid,piid) di alcune property**
+nello schema MiOT. L'app ufficiale non se ne accorge perché scarica lo schema
+versionato dal cloud ad ogni avvio; la nostra integrazione ha la mappa hardcoded,
+quindi un singolo `get_properties` batch con una property non più esistente veniva
+respinto con `code=80001` sull'intero envelope → `Failed setup` del coordinator.
+
+Property **spostate** (nuova posizione identificata via diff before/after dall'app):
+
+| Property | fw1035 | fw1043 |
+|----------|--------|--------|
+| child_lock | (2,5) | **(6,10)** |
+| blade_oscillation | (2,6) | **(2,8)** |
+| sync_oscillation | (2,11) | **(2,9)** |
+
+Property **rimosse** dall'integrazione (non rimappate):
+
+| Property | fw1035 | Motivo |
+|----------|--------|--------|
+| key_tone | (6,7) | Dinamica: 80001 quando OFF, 1 quando ON — incompatibile col batch polling |
+| display LED | (6,11) | (6,11) ora restituisce la stringa timezone, non più il LED |
+| off_timer | (2,8) | (2,8) è ora blade_oscillation; nuova posizione del timer sconosciuta |
+| continuous_monitoring | (2,10) | Semantica cambiata (legge 1 o 2, mai 0); non confermata |
+
+**Comportamento diagnostico del cloud in fw1043**: sondando una property che non esiste
+più alla vecchia posizione, il relay non restituisce un errore pulito ma o **omette**
+l'item dal response batch, o **sostituisce** con un'altra property (es. sondando (2,11)
+si riceve un item etichettato (2,1)). Per questo il coordinator fa match per
+`(siid,piid)` dell'item ritornato, non per posizione nella richiesta.
+
+Sessione di dettaglio: [dev/sessions/2026-06-05-firmware-1043-property-migration.md](../dev/sessions/2026-06-05-firmware-1043-property-migration.md).

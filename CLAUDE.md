@@ -13,26 +13,34 @@ Model ID: dreame.fan.u2519
 Device:   Dreame Bladeless Fan MF10
 DID:      <DID>
 MAC:      <MAC>
-Firmware: 1035 / Plugin 104
+Firmware: 1043 / Plugin 116
 ```
 
-## Stato attuale
-**Fase 1 / Milestone 3 completata + Fase 2 (discovery) completata + Fase 3 (entità avanzate) completata**.
+> ⚠️ L'aggiornamento firmware 1035→1043 (2026-06-05) ha **spostato alcune property MiOT**.
+> Posizioni aggiornate: child_lock (2,5)→(6,10), blade_oscillation (2,6)→(2,8),
+> sync_oscillation (2,11)→(2,9). **Rimosse**: key_tone, display, off_timer, continuous_monitoring.
+> Dettaglio: [docs/property_map.md](docs/property_map.md) → "Firmware migration history" e
+> [dev/sessions/2026-06-05-firmware-1043-property-migration.md](dev/sessions/2026-06-05-firmware-1043-property-migration.md).
 
-Property map validata empiricamente: 13 property utilizzabili, mappate via before/after diff
-con app Dreamehome. Vedi [docs/property_map.md](docs/property_map.md) e
+## Stato attuale
+**Fase 1 / Milestone 3 completata + Fase 2 (discovery) completata + Fase 3 (entità avanzate) completata + migrazione firmware 1043 completata**.
+
+Property map validata empiricamente via before/after diff con app Dreamehome.
+Vedi [docs/property_map.md](docs/property_map.md) e
 [dev/sessions/2026-05-28-property-discovery.md](dev/sessions/2026-05-28-property-discovery.md).
 
-Cosa funziona (entità HA esposte):
+Cosa funziona (entità HA esposte, **aggiornato fw1043**):
 
 - **fan**: entità principale — **on/off**, velocità (percentuale 1–10), preset mode
   (AI/Potente/Sonno/Manuale/Naturale). Velocità applicata forzando mode=manual (il device
   onora `fan_speed` solo in manuale). Stato ottimistico fino a conferma del poll.
 - **sensor**: temperatura ambientale (°C)
-- **switch**: blocco bambini, monitoraggio continuo, tono tasti, display LED, rotazione device
+- **switch**: blocco bambini, rotazione device
 - **select**: oscillazione pale (6 stati coerenti: off/left/right/both[independent|sync|staggered])
-- **number**: timer spegnimento (0–12 ore)
 - Config flow, autenticazione cloud, polling 30s, refresh immediato post-comando
+
+⚠️ **Rimosse in fw1043** (non più esposte): switch tono tasti / display LED / monitoraggio
+continuo, number timer spegnimento. Vedi migration history per i motivi.
 
 **ON/OFF RISOLTO (2026-05-29)** — power controllabile via action MiOT:
 

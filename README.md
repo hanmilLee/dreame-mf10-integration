@@ -24,8 +24,7 @@ Cloud-first — no local API assumed, just your Dreamehome account.
   synchronized · staggered)
 - 🔄 **Device rotation** — the base swiveling on itself, as a switch
 - 🌡️ **Ambient temperature** sensor
-- 🔒 Switches for child lock, continuous monitoring (TempSync), key tone, LED display
-- ⏲️ Auto-off timer
+- 🔒 **Child lock** switch
 - ☁️ UI config flow, multi-region cloud login, 30 s polling with immediate refresh after each command
 
 ## Screenshots
@@ -72,15 +71,19 @@ differently than expected.
 | `fan.dreame_mf10`                            | `fan`    | Main control: on/off, speed (%), preset modes                   |
 | `sensor.dreame_mf10_temperature`             | `sensor` | Ambient temperature (°C, read-only)                             |
 | `switch.dreame_mf10_child_lock`              | `switch` | Child lock                                                      |
-| `switch.dreame_mf10_continuous_monitoring`   | `switch` | TempSync / continuous temperature monitoring                    |
-| `switch.dreame_mf10_key_tone`                | `switch` | Button beep                                                     |
-| `switch.dreame_mf10_display_led`             | `switch` | LED display always-on                                           |
 | `switch.dreame_mf10_device_rotation`         | `switch` | Base rotation (the whole fan swiveling on itself)               |
 | `select.dreame_mf10_oscillation`             | `select` | Blade oscillation (off / left / right / both …)                 |
-| `number.dreame_mf10_off_timer`               | `number` | Auto-off timer (hours, 0 = disabled)                            |
 
 > Fan speed is only honored by the device in **Manual** mode, so moving the speed slider
 > automatically switches the fan to Manual.
+
+<!-- -->
+
+> **Firmware note (1043 / plugin 116):** a firmware update relocated several MiOT properties.
+> Child lock, blade oscillation and sync oscillation were remapped; key tone, LED display,
+> auto-off timer and continuous monitoring were dropped (the firmware made them unreadable or
+> unstable to poll). See [docs/property_map.md](docs/property_map.md) → *Firmware migration
+> history* for details.
 
 ## On/off
 
