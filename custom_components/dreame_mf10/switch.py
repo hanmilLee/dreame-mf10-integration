@@ -25,9 +25,6 @@ class _SwitchSpec:
 
 _SWITCHES: tuple[_SwitchSpec, ...] = (
     _SwitchSpec("child_lock", "child_lock", "mdi:lock"),
-    _SwitchSpec("continuous_monitoring", "continuous_monitoring", "mdi:thermometer-auto"),
-    _SwitchSpec("key_tone", "key_tone", "mdi:volume-high"),
-    _SwitchSpec("display", "display", "mdi:led-on"),
     _SwitchSpec("device_rotation", "device_rotation", "mdi:rotate-360"),
 )
 

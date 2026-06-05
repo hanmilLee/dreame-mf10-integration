@@ -41,9 +41,6 @@
   "entity": {
     "switch": {
       "child_lock": { "name": "Child lock" },
-      "continuous_monitoring": { "name": "Continuous monitoring" },
-      "key_tone": { "name": "Key tone" },
-      "display": { "name": "Display LED" },
       "device_rotation": { "name": "Device rotation" }
     },
     "select": {
@@ -58,9 +55,6 @@
           "both_staggered": "Both (staggered)"
         }
       }
-    },
-    "number": {
-      "off_timer": { "name": "Off timer" }
     }
   }
 }

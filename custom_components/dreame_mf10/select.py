@@ -43,7 +43,7 @@ async def async_setup_entry(
 class MF10OscillationSelect(CoordinatorEntity[MF10Coordinator], SelectEntity):
     """Unified oscillation control.
 
-    Composes blade_oscillation (2,6) with sync (2,11) and staggered (2,12).
+    Composes blade_oscillation (2,8) with sync (2,9) and staggered (2,12).
     sync/staggered are only valid with both blades active, so this entity
     enforces coherent state transitions on writes.
     """

@@ -22,7 +22,7 @@ MAX_POLLING_INTERVAL = 300
 MF10_SPEED_MIN = 1
 MF10_SPEED_MAX = 10
 
-PLATFORMS: list[str] = ["sensor", "fan", "switch", "select", "number"]
+PLATFORMS: list[str] = ["sensor", "fan", "switch", "select"]
 
 MF10_POWER_ON = 1
 MF10_POWER_OFF = 2
@@ -57,21 +57,22 @@ MF10_PROPERTY_CANDIDATES: dict[str, list[dict[str, int]]] = {
 }
 
 # Canonical, validated MiOT property map for dreame.fan.u2519.
+# Updated for firmware 1043 / plugin 116 (2026-06-05).
 # These are the (siid, piid) used for production polling and entity state.
 MF10_PROPERTY_MAP: dict[str, dict] = {
-    "power": {"siid": 2, "piid": 1},              # 1=ON, 2=OFF — read-only
-    "mode": {"siid": 2, "piid": 3},               # 0=AI auto, 1=Potente, 2=Sonno, 3=Manuale, 7=Naturale
-    "fan_speed": {"siid": 2, "piid": 4},          # int 1–10
-    "child_lock": {"siid": 2, "piid": 5},         # 0=OFF, 1=ON
-    "blade_oscillation": {"siid": 2, "piid": 6},   # 0=none, 1=left, 2=right, 3=both
-    "device_rotation": {"siid": 2, "piid": 7},     # 0=off, 1=on (rotazione del dispositivo su se stesso)
-    "sync_oscillation": {"siid": 2, "piid": 11},        # 0=off, 1=on (blades move in sync)
-    "staggered_oscillation": {"siid": 2, "piid": 12},  # 0=off, 1=on (blades out of phase)
-    "continuous_monitoring": {"siid": 2, "piid": 10},  # 0=off, 1=on (TempSync feature)
-    "key_tone": {"siid": 6, "piid": 7},                # 0=off, 1=on (tono tasti / beep)
-    "display": {"siid": 6, "piid": 11},               # 0=off, 1=on (display LED)
-    "off_timer": {"siid": 2, "piid": 8},              # 0=disattivato, int=ore (timer spegnimento)
-    "temperature": {"siid": 3, "piid": 2},              # °C, read-only sensor
+    "power": {"siid": 2, "piid": 1},                  # 1=ON, 2=OFF — read-only
+    "mode": {"siid": 2, "piid": 3},                   # 0=AI auto, 1=Potente, 2=Sonno, 3=Manuale, 7=Naturale
+    "fan_speed": {"siid": 2, "piid": 4},              # int 1–10
+    "child_lock": {"siid": 6, "piid": 10},            # 0=OFF, 1=ON — moved from (2,5) in fw1043
+    "blade_oscillation": {"siid": 2, "piid": 8},      # 0=none, 1=left, 2=right, 3=both — moved from (2,6) in fw1043
+    "device_rotation": {"siid": 2, "piid": 7},        # 0=off, 1=on
+    "sync_oscillation": {"siid": 2, "piid": 9},       # 0=off, 1=on — moved from (2,11) in fw1043
+    "staggered_oscillation": {"siid": 2, "piid": 12}, # 0=off, 1=on — confirmed fw1043
+    "temperature": {"siid": 3, "piid": 2},            # °C, read-only sensor
+    # REMOVED fw1043: continuous_monitoring (2,10) — semantics changed (reads 1 or 2, never 0); behaviour unconfirmed
+    # REMOVED fw1043: key_tone (6,7) — returns 80001 when off, breaks batch polling
+    # REMOVED fw1043: display (6,11) — reassigned to timezone string
+    # REMOVED fw1043: off_timer — (2,8) is now blade_oscillation; timer location unknown
 }
 
 # Properties present but NOT yet identified:
@@ -107,9 +108,10 @@ MF10_MODE_OPTIONS: dict[int, str] = {
 }
 MF10_MODE_NAME_TO_VALUE: dict[str, int] = {v: k for k, v in MF10_MODE_OPTIONS.items()}
 
-# Unified oscillation select — composes blade_oscillation (2,6) +
-# sync_oscillation (2,11) + staggered_oscillation (2,12) into a single
+# Unified oscillation select — composes blade_oscillation (2,8) +
+# sync_oscillation (2,9) + staggered_oscillation (2,12) into a single
 # coherent state. sync/staggered are only meaningful with both blades active.
+# NOTE fw1043: sync moved from (2,11) to (2,9).
 MF10_OSC_OFF = "off"                       # blade=0
 MF10_OSC_LEFT = "left"                     # blade=1, sync=0, staggered=0
 MF10_OSC_RIGHT = "right"                   # blade=2, sync=0, staggered=0
@@ -135,6 +137,3 @@ MF10_OSC_TO_PROPS: dict[str, tuple[int, int, int]] = {
     MF10_OSC_BOTH_STAGGERED: (MF10_BLADE_OSC_BOTH, 0, 1),
 }
 
-# Off timer range (hours). Range chosen conservatively pending app-side max validation.
-MF10_OFF_TIMER_MIN = 0
-MF10_OFF_TIMER_MAX = 12

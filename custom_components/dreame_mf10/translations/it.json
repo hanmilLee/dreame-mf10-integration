@@ -41,9 +41,6 @@
   "entity": {
     "switch": {
       "child_lock": { "name": "Blocco bambini" },
-      "continuous_monitoring": { "name": "Monitoraggio continuo" },
-      "key_tone": { "name": "Tono tasti" },
-      "display": { "name": "Display LED" },
       "device_rotation": { "name": "Rotazione dispositivo" }
     },
     "select": {
@@ -58,9 +55,6 @@
           "both_staggered": "Entrambe (sfalsata)"
         }
       }
-    },
-    "number": {
-      "off_timer": { "name": "Timer spegnimento" }
     }
   }
 }
