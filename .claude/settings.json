@@ -1,0 +1,64 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+
+      "Bash(ls)",
+      "Bash(ls *)",
+      "Bash(find *)",
+      "Bash(grep *)",
+      "Bash(jq *)",
+      "Bash(python3 *)",
+      "Bash(cp *)",
+      "Bash(mkdir *)",
+
+      "Bash(git status)",
+      "Bash(git status *)",
+      "Bash(git diff)",
+      "Bash(git diff *)",
+      "Bash(git log)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git branch)",
+      "Bash(git branch *)",
+      "Bash(git remote *)",
+      "Bash(git stash list)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git tag *)",
+
+      "Bash(docker compose -f sandbox/docker-compose.yml up *)",
+      "Bash(docker compose -f sandbox/docker-compose.yml down)",
+      "Bash(docker compose -f sandbox/docker-compose.yml down *)",
+      "Bash(docker compose -f sandbox/docker-compose.yml restart *)",
+      "Bash(docker compose -f sandbox/docker-compose.yml logs *)",
+      "Bash(docker compose -f sandbox/docker-compose.yml exec *)",
+      "Bash(docker compose -f sandbox/docker-compose.yml ps *)",
+
+      "Bash(.venv/bin/python *)",
+      "Bash(PYTHONPATH=* .venv/bin/python *)",
+      "Bash(set -a *)",
+
+      "Bash(rm -rf sandbox/config/.storage)",
+      "Bash(rm -rf sandbox/config/.storage *)",
+      "Bash(rm -rf sandbox/config/home-assistant_v2.db)",
+      "Bash(rm -rf sandbox/config/home-assistant.log*)"
+    ],
+    "ask": [
+      "Bash(git push)",
+      "Bash(git push *)"
+    ],
+    "deny": [
+      "Bash(git reset --hard *)",
+      "Bash(git checkout -- *)",
+      "Bash(git clean -f *)",
+      "Bash(git clean -fd *)",
+      "Bash(git branch -D *)",
+      "Bash(git rebase -i *)",
+      "Bash(rm -rf /)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~/*)",
+      "Bash(docker system prune *)"
+    ]
+  }
+}
